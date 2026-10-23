@@ -97,6 +97,42 @@ Examples:
 * `add n/Betsy Crowe p/1234567 e/betsy@example.com s/active-alumnus ty/teacher r/Conductor i/Violin:12 i/Piano:4`
 * `add n/Jane Tan p/91234567 e/jane@example.com s/member g/Chamber Orchestra g/New Member Training`
 
+### Importing people from a CSV file: `import`
+
+Imports people from a CSV file in the `imports` folder. The imported people are added to the existing directory; import does not replace existing people.
+
+Format: `import FILE_NAME`
+
+Place the CSV file in `[JAR file location]/imports`, then provide its file name, including the `.csv` extension. For example, use `import members.csv` for `[JAR file location]/imports/members.csv`.
+
+The CSV file must have this exact header and column order:
+
+```text
+name,phone,email,status,memberType,role,instruments,groups
+```
+
+Each subsequent row must have exactly these eight columns:
+
+* `name`, `phone`, and `email` follow the same validation rules as `add`.
+* `status` must be `member`, `active-alumnus`, or `inactive-alumnus`.
+* `memberType` must be `student` or `teacher`.
+* `role` and `groups` are optional. Represent an empty optional value with `""`.
+* List multiple instruments as `NAME:YEARS` values separated by semicolons, for example `Violin:8;Piano:5`.
+* List multiple groups separated by semicolons, for example `Orchestra;Leadership Team`.
+* Within an instrument or group name, write `\;` for a literal semicolon and `\\` for a literal backslash. `export` applies these escapes automatically.
+
+Example CSV file:
+
+```csv
+name,phone,email,status,memberType,role,instruments,groups
+"Alicia Tan","91234567","alicia.tan@example.com","member","student","Section Leader","Violin:8;Piano:5","Orchestra;Leadership Team"
+"Benjamin Lee","92345678","benjamin.lee@example.com","active-alumnus","teacher","","Cello:12",""
+```
+
+If any row has invalid data, does not contain eight columns, or duplicates an existing person or another CSV row, the entire import fails and the directory remains unchanged.
+
+Example: `import members.csv`
+
 ### Listing all persons: `list`
 
 Shows all members and alumni in the directory, in insertion order. Use this command after `find` or `filter` to return to the full list. It also clears any ordering selected with `sort`.
@@ -217,6 +253,25 @@ Examples:
 * `filter g/Chamber Orchestra`
 * `filter s/member i/Violin:3 g/Chamber Orchestra`
 
+### Exporting current results: `export`
+
+Exports the members currently shown in the list to a CSV file.
+
+Format: `export`
+
+* Exports the current displayed results. Run `find` or `filter` first to export only matching members; run `list` first to export everyone.
+* Creates a CSV file in the `exports` folder inside HiveMind’s home folder.
+* Each export receives the first unused numbered filename: `current-results-01.csv`, then `current-results-02.csv`, and so on. Existing export files are not overwritten.
+* The CSV contains these columns: name, phone, email, status, member type, role, instruments, and groups.
+* A member with multiple instruments or groups has them recorded in one field, separated by semicolons.
+* A semicolon within an instrument or group name is escaped as `\;`, and a backslash as `\\`.
+* Exporting an empty result list still creates a CSV file containing the column headers.
+
+Examples:
+
+* `find alex` followed by `export` exports the members whose names contain `alex`.
+* `filter s/member i/Violin` followed by `export` exports the current members who play violin.
+
 ### Deleting a person: `delete`
 
 Deletes the specified person from HiveMind.
@@ -310,6 +365,7 @@ Action | Format, Examples
 **Clear** | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
 **Edit** | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [s/STATUS] [ty/TYPE] [r/ROLE] [i/INSTRUMENT:YEARS]…​ [g/GROUP]…​`<br> e.g., `edit 2 n/James Lee g/Chamber Orchestra`
+**Export** | `export`
 **Find** | `find KEYWORD [MORE_KEYWORDS]…`<br> e.g., `find alex david`
 **Filter** | `filter [s/STATUS]... [i/NAME[:MIN_YEARS]]... [ty/TYPE]... [r/ROLE]... [g/GROUP]...`<br> e.g., `filter s/member i/Violin:3 g/Chamber Orchestra`
 **List** | `list`
@@ -317,3 +373,4 @@ Action | Format, Examples
 **Undo** | `undo`
 **Redo** | `redo`
 **Help** | `help`
+**Import** | `import FILE_NAME`<br> e.g., `import members.csv`

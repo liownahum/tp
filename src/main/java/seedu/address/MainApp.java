@@ -1,6 +1,7 @@
 package seedu.address;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
@@ -37,6 +38,7 @@ public class MainApp extends Application {
     private static final Logger logger = LogsCenter.getLogger(MainApp.class);
     private static final Path USER_PREFS_FILE_PATH = Paths.get("preferences.json");
     private static final Path ADDRESS_BOOK_FILE_PATH = Paths.get("data", "addressbook.json");
+    private static final Path IMPORT_DIRECTORY = Paths.get("imports");
 
     protected Ui ui;
     protected Logic logic;
@@ -47,6 +49,7 @@ public class MainApp extends Application {
     public void init() throws Exception {
         logger.info("=============================[ Initializing AddressBook ]===========================");
         super.init();
+        createImportDirectory();
 
         JsonUserPrefsStorage userPrefsStorage = new JsonUserPrefsStorage(USER_PREFS_FILE_PATH);
         UserPrefs userPrefs = initPrefs(userPrefsStorage);
@@ -59,6 +62,26 @@ public class MainApp extends Application {
         logic = new LogicManager(model, storage);
 
         ui = new UiManager(logic, storage.getAddressBookFilePath());
+    }
+
+    /**
+     * Creates the directory that holds CSV files available for import.
+     */
+    private void createImportDirectory() {
+        Path importDirectory = getImportDirectory();
+        try {
+            Files.createDirectories(importDirectory);
+        } catch (IOException ioe) {
+            logger.warning("Could not create import directory " + importDirectory + ": "
+                    + StringUtil.getDetails(ioe));
+        }
+    }
+
+    /**
+     * Returns the directory that holds CSV files available for import.
+     */
+    protected Path getImportDirectory() {
+        return IMPORT_DIRECTORY;
     }
 
     /**

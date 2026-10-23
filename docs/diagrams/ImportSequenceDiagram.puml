@@ -1,0 +1,44 @@
+@startuml
+!include style.puml
+skinparam ArrowFontStyle plain
+
+box Logic LOGIC_COLOR_T1
+participant "i:ImportCommand" as ImportCommand LOGIC_COLOR
+participant "r:CommandResult" as CommandResult LOGIC_COLOR
+end box
+
+box Model MODEL_COLOR_T1
+participant "m:Model" as Model MODEL_COLOR
+end box
+
+box Storage STORAGE_COLOR_T1
+participant ":CsvImporter" as CsvImporter STORAGE_COLOR
+end box
+
+[-> ImportCommand : execute(...)
+activate ImportCommand
+ImportCommand -> CsvImporter : importPeople(importPath)
+activate CsvImporter
+CsvImporter --> ImportCommand : importedPeople
+deactivate CsvImporter
+
+ImportCommand -> Model : getAddressBook()
+activate Model
+Model --> ImportCommand : currentAddressBook
+deactivate Model
+note right of ImportCommand
+Build an updated copy containing every
+imported person. Detect duplicates here.
+end note
+ImportCommand -> Model : setAddressBook(updated copy)
+activate Model
+Model --> ImportCommand
+deactivate Model
+create CommandResult
+ImportCommand -> CommandResult : new CommandResult(...)
+activate CommandResult
+CommandResult --> ImportCommand : r
+deactivate CommandResult
+deactivate ImportCommand
+[<-- ImportCommand : r
+@enduml

@@ -201,11 +201,35 @@ Sorting tests cover case-insensitive names, membership order, ties, switching or
 
 The command replaces the predicate on the full directory's `FilteredList`, reports its match count, and leaves stored records unchanged. `list` restores all records. Parser, predicate, and command tests cover repeated criteria, invalid inputs, threshold boundaries, matching years on the correct instrument, combined criteria, people without instruments or groups, group-name normalization and whole-name matching, empty results, and searches after earlier filters.
 
+### Exporting current results
+
+`AddressBookParser` recognises `export` and creates an `ExportCommand` directly because the command takes no arguments. When executed, `ExportCommand` obtains the current displayed results through `Model#getFilteredPersonList()` and passes them to `CsvExporter` with the `exports` directory. Exporting does not modify the model, so it does not save the address book or create an undo state.
+
+`CsvExporter` creates CSV content with columns for name, phone, email, status, member type, role, instruments, and groups. Each field is quoted, with embedded quotation marks escaped. It sorts a person's instruments and groups by name and joins them with semicolons. `CsvListCodec` escapes semicolons and backslashes within each list value; `CsvImporter` decodes them before constructing instruments and groups, so valid names survive an export/import round trip. Empty results produce a file containing only the CSV header.
+
+Before writing, `CsvExporter` finds the first unused filename in the form `current-results-XX.csv`, beginning with `current-results-01.csv`; existing exports are therefore preserved rather than overwritten. If file creation or writing fails, `ExportCommand` converts the `IOException` into a `CommandException`. Parser and exporter tests cover recognition of the command, normal and empty exports, and selecting the first available numbered filename while preserving existing files.
+
+![Export command sequence diagram](images/ExportSequenceDiagram.png)
+
 The following sequence diagram traces `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra`, using all five supported fields. Parsing creates a `FilterCommand` containing the criteria; executing that command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`.
 
 ![Sequence diagram for filter, showing criteria parsing, predicate creation during execution, filtered-list evaluation, and the result count](images/FilterSequenceDiagram.png)
 
 [Open the sequence diagram at full size](images/FilterSequenceDiagram.png). [PlantUML source](diagrams/FilterSequenceDiagram.puml). The diagram focuses on successful parsing and execution; model snapshots and UI list-change notifications are omitted.
+
+### Importing people from CSV
+
+`AddressBookParser` routes `import FILE_NAME` to `ImportCommandParser`. The parser accepts a non-empty `.csv` file name without path separators, so `ImportCommand` always resolves it inside the `imports` directory.
+
+`ImportCommand` asks `CsvImporter` to read the entire CSV before changing the model. `CsvImporter` validates the required header and eight-column layout, then constructs `Person` objects using the existing model value objects such as `Name`, `Phone`, `Email`, `Status`, and `MemberType`. This reuses the application's validation rules instead of duplicating them in the CSV layer. It returns the complete imported list only when every row is valid.
+
+After parsing succeeds, `ImportCommand` copies the current address book and adds every imported person to the copy. This detects duplicates against both existing records and earlier CSV rows without mutating the model. Only when all additions succeed does it replace the model's address book with the copy. Consequently, invalid CSV data and duplicate people fail the import atomically: the current directory remains unchanged.
+
+The following sequence diagram focuses on a successful `ImportCommand.execute(...)` call. Command parsing, field-level CSV parsing, error handling, and `LogicManager`'s generic save-and-rollback handling are omitted; they do not affect the command's validate-then-replace behavior.
+
+![Import command sequence diagram](images/ImportSequenceDiagram.png)
+
+`ImportCommandTest` and `ImportCommandIntegrationTest` cover successful imports, duplicate handling, invalid data, malformed row layouts, optional fields, and atomic failures. `AddressBookParserTest` verifies that the command is recognised.
 
 ### Undo/redo feature
 

@@ -1,6 +1,7 @@
 package seedu.address;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -113,10 +114,14 @@ public class MainAppTest {
 
     @Test
     public void init_usesStorageManagerToInitializeModel() throws Exception {
-        TestMainApp app = new TestMainApp();
+        Path importDirectory = temporaryFolder.resolve("imports");
+        TestMainApp app = new TestMainApp(importDirectory);
+
+        assertFalse(Files.exists(importDirectory));
 
         app.init();
 
+        assertTrue(Files.isDirectory(importDirectory));
         assertInstanceOf(StorageManager.class, app.storage);
         assertSame(app.storage, app.storageProvidedToModelInitialization);
         assertSame(app.modelToInitialize, app.model);
@@ -129,7 +134,21 @@ public class MainAppTest {
 
     private static class TestMainApp extends MainApp {
         private final Model modelToInitialize = new ModelManager();
+        private final Path importDirectory;
         private StorageManager storageProvidedToModelInitialization;
+
+        TestMainApp() {
+            this(Path.of("imports"));
+        }
+
+        TestMainApp(Path importDirectory) {
+            this.importDirectory = importDirectory;
+        }
+
+        @Override
+        protected Path getImportDirectory() {
+            return importDirectory;
+        }
 
         @Override
         protected UserPrefs initPrefs(JsonUserPrefsStorage storage) {
