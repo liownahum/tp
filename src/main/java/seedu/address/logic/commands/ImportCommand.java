@@ -7,6 +7,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.List;
 
+import seedu.address.MainApp;
 import seedu.address.commons.exceptions.IllegalValueException;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.model.AddressBook;
@@ -31,20 +32,35 @@ public class ImportCommand extends Command {
     public static final String MESSAGE_FILE_NOT_FOUND = "No file named %s in the imports folder.";
     public static final String MESSAGE_DUPLICATE_PERSON =
             "Import failed because a person already exists in the address book or is repeated in the CSV.";
-
-    private static final Path IMPORT_DIRECTORY = Path.of("imports");
+    public static final String MESSAGE_INVALID_FILENAME = "Invalid filename. Use a valid Windows filename without "
+            + "reserved characters, control characters, trailing periods, or reserved names such as CON or COM1.";
 
     private final String fileName;
 
+    /**
+     * Creates an ImportCommand to import the specified CSV file.
+     *
+     * @param fileName Name of the CSV file to import.
+     */
     public ImportCommand(String fileName) {
-        this.fileName = requireNonNull(fileName);
+        requireNonNull(fileName);
+        this.fileName = fileName;
+    }
+
+    /**
+     * Returns the file name of the CSV file to import.
+     *
+     * @return the file name
+     */
+    public String getFileName() {
+        return fileName;
     }
 
     @Override
     public CommandResult execute(Model model) throws CommandException {
         requireNonNull(model);
 
-        Path importPath = IMPORT_DIRECTORY.resolve(fileName);
+        Path importPath = MainApp.IMPORT_DIRECTORY.resolve(fileName);
         List<Person> importedPeople;
         try {
             importedPeople = CsvImporter.importPeople(importPath);

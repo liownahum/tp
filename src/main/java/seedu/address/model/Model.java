@@ -90,6 +90,16 @@ public interface Model {
     void undoAddressBook();
 
     /**
+     * Returns the number of changes that {@link #undoAddressBook()} can revert one after another.
+     */
+    int getUndoableChangeCount();
+
+    /**
+     * Returns the number of undone changes that {@link #redoAddressBook()} can restore one after another.
+     */
+    int getRedoableChangeCount();
+
+    /**
      * Returns true if there is an undone change that {@link #redoAddressBook()} can restore.
      */
     boolean canRedoAddressBook();
@@ -101,7 +111,7 @@ public interface Model {
 
     /**
      * Records the current address book state so that the change leading to it can be undone.
-     * Does nothing if the address book is unchanged since the last recorded state.
+     * Undone changes can no longer be redone afterwards, even if the address book is unchanged.
      */
     void commitAddressBook();
 

@@ -26,6 +26,7 @@ import seedu.address.model.person.Status;
 public class ParserUtil {
 
     public static final String MESSAGE_INVALID_INDEX = "Index must be a positive integer.";
+    public static final String MESSAGE_INVALID_COUNT = "Count must be a positive integer.";
 
     private static final String INSTRUMENT_YEARS_SEPARATOR = ":";
 
@@ -40,6 +41,25 @@ public class ParserUtil {
             throw new ParseException(MESSAGE_INVALID_INDEX);
         }
         return Index.fromOneBased(Integer.parseInt(trimmedIndex));
+    }
+
+    /**
+     * Parses {@code count} into a positive number of steps. Leading and trailing whitespaces will be trimmed.
+     * A count too large for an {@code int} is returned as {@link Integer#MAX_VALUE}, as it exceeds any history.
+     *
+     * @throws ParseException if the given {@code count} is not a positive integer.
+     */
+    public static int parseCount(String count) throws ParseException {
+        requireNonNull(count);
+        String trimmedCount = count.trim();
+        if (!trimmedCount.matches("\\d+") || trimmedCount.matches("0+")) {
+            throw new ParseException(MESSAGE_INVALID_COUNT);
+        }
+        try {
+            return Integer.parseInt(trimmedCount);
+        } catch (NumberFormatException e) {
+            return Integer.MAX_VALUE;
+        }
     }
 
     /**
@@ -176,17 +196,17 @@ public class ParserUtil {
     }
 
     /**
-     * Parses a non-blank free-text role, trimming surrounding whitespace.
+     * Parses a non-blank free-text role.
+     * Surrounding and repeated whitespace, including Unicode space separators, is normalized by {@code Role}.
      *
      * @throws ParseException if the role is blank.
      */
     public static Role parseRole(String role) throws ParseException {
         requireNonNull(role);
-        String trimmedRole = role.trim();
-        if (!Role.isValidRole(trimmedRole)) {
+        if (!Role.isValidRole(role)) {
             throw new ParseException(Role.MESSAGE_CONSTRAINTS);
         }
-        return new Role(trimmedRole);
+        return new Role(role);
     }
 
     /**

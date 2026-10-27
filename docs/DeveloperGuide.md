@@ -237,12 +237,13 @@ The following sequence diagram focuses on a successful `ImportCommand.execute(..
 
 The undo/redo mechanism is facilitated by `VersionedAddressBook`. It extends `AddressBook` with an undo/redo history, stored internally as an `addressBookStateList` and `currentStatePointer`. Additionally, it implements the following operations:
 
-* `VersionedAddressBook#commit()` — Records the current address book state in its history, unless the data is unchanged.
+* `VersionedAddressBook#commit()` — Discards any undone states, then records the current address book state in its history, unless the data is unchanged.
 * `VersionedAddressBook#undo()` — Reverts the most recent change by restoring an earlier state from its history.
 * `VersionedAddressBook#redo()` — Restores the most recently undone state from its history.
 * `VersionedAddressBook#canUndo()` and `VersionedAddressBook#canRedo()` — Return whether there is a change to revert or restore.
+* `VersionedAddressBook#getUndoableCount()` and `VersionedAddressBook#getRedoableCount()` — Return how many changes can be reverted or restored one after another.
 
-These operations are exposed in the `Model` interface as `Model#commitAddressBook()`, `Model#undoAddressBook()`, `Model#redoAddressBook()`, `Model#canUndoAddressBook()` and `Model#canRedoAddressBook()` respectively.
+These operations are exposed in the `Model` interface as `Model#commitAddressBook()`, `Model#undoAddressBook()`, `Model#redoAddressBook()`, `Model#canUndoAddressBook()`, `Model#canRedoAddressBook()`, `Model#getUndoableChangeCount()` and `Model#getRedoableChangeCount()` respectively.
 
 Given below is an example usage scenario and how the undo/redo mechanism behaves at each step.
 
@@ -266,7 +267,7 @@ Step 4. The user now decides that adding the person was a mistake, and decides t
 
 ![UndoRedoState3](images/UndoRedoState3.png)
 
-<div markdown="span" class="alert alert-info">:information_source: **Note:** If the `currentStatePointer` is at index 0, pointing to the initial address book state, then there is nothing to restore. The `undo` command uses `Model#canUndoAddressBook()` to check if this is the case. If so, it will show "There is no change to undo." to the user.
+<div markdown="span" class="alert alert-info">:information_source: **Note:** If the `currentStatePointer` is at index 0, pointing to the initial address book state, then there is nothing to restore. The `undo` command uses `Model#getUndoableChangeCount()` to check if this is the case. If so, it will show "There is no change to undo." to the user.
 
 </div>
 
@@ -284,7 +285,9 @@ Similarly, how an undo operation goes through the `Model` component is shown bel
 
 The `redo` command does the opposite: it calls `Model#redoAddressBook()`, which shifts the `currentStatePointer` once to the right, pointing to the previously undone state, and restores the address book to that state.
 
-<div markdown="span" class="alert alert-info">:information_source: **Note:** If the `currentStatePointer` is at index `addressBookStateList.size() - 1`, pointing to the latest address book state, then there are no undone states to restore. The `redo` command uses `Model#canRedoAddressBook()` to check if this is the case. If so, it shows "There is no undone change to redo." to the user.
+Both commands take an optional count, e.g. `undo 3`. `UndoCommandParser` and `RedoCommandParser` read a given count with `ParserUtil#parseCount()`, and use a count of 1 when none is given. The command first compares the count with `Model#getUndoableChangeCount()` (or `Model#getRedoableChangeCount()`). If the history is too short, it fails without changing anything, so the user is never left with only some of the requested changes undone. Otherwise it calls `Model#undoAddressBook()` (or `Model#redoAddressBook()`) once per step. `LogicManager` then saves the address book once. If that save fails, the rollback described in Step 3 restores the data and the `currentStatePointer` from before the command, so all of the steps are reverted together.
+
+<div markdown="span" class="alert alert-info">:information_source: **Note:** If the `currentStatePointer` is at index `addressBookStateList.size() - 1`, pointing to the latest address book state, then there are no undone states to restore. The `redo` command uses `Model#getRedoableChangeCount()` to check if this is the case. If so, it shows "There is no undone change to redo." to the user.
 
 </div>
 
@@ -293,6 +296,10 @@ Step 5. The user then decides to execute the command `list`. `list` does not cha
 ![UndoRedoState4](images/UndoRedoState4.png)
 
 Step 6. The user executes `clear`. `LogicManager` executes the command and, after a successful save, calls `Model#commitAddressBook()`. Since the `currentStatePointer` is not pointing at the end of the `addressBookStateList`, all address book states after the `currentStatePointer` will be purged. Reason: it no longer makes sense to redo the `add n/David …​` command. This is the behavior that most modern desktop applications follow.
+
+<div markdown="span" class="alert alert-info">:information_source: **Note:** The undone states are purged even if the command leaves the data unchanged (e.g. an `edit` that sets a field to its current value), because the user sees it reported as a new change. The undone states are kept only after commands that do not save data (e.g. `list`, as in Step 5) and after `undo` and `redo` themselves, which override `Command#recordsChange()` to return `false` so that `LogicManager` does not call `Model#commitAddressBook()` after them.
+
+</div>
 
 ![UndoRedoState5](images/UndoRedoState5.png)
 
@@ -316,7 +323,7 @@ The following activity diagram summarizes what happens when a user executes a ne
 
 * **Alternative 1 (current choice):** `LogicManager` commits after a successful save.
   * Pros: Failed saves never enter the history; new data-changing commands are undoable without extra code.
-  * Cons: Relies on `commit()` comparing states to skip unchanged data.
+  * Cons: Relies on `commit()` comparing states to skip unchanged data, and on `undo` and `redo` opting out through `Command#recordsChange()`.
 
 * **Alternative 2:** Each data-changing command calls `Model#commitAddressBook()` (the original AB3 proposal).
   * Pros: Explicit.
@@ -551,7 +558,7 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 * **Coordinator**: The user of HiveMind, i.e., the person in the CCA who is responsible for maintaining its member records and organising players for pieces and activities.
 * **Directory**: The full set of member records stored in HiveMind.
 * **Displayed index**: The number shown next to a member in the list currently displayed. It may change after a `find`, `filter`, `sort` or `list`, and is used to refer to a member in commands such as `delete`.
-* **Filter**: To display only the members who meet all the given criteria (e.g., status, instrument, minimum years played). Unlike _find_, which searches by name only.
+* **Filter**: To display only members who match at least one supplied criterion in each specified field (OR within a field, AND between fields). Omitted fields impose no restriction. Unlike _find_, which searches by name only.
 * **Inactive alumnus**: An alumnus who no longer plays with the CCA, but whose record is kept (e.g., for contacting them about alumni events).
 * **Instrument experience**: The whole number of years a member has played a particular instrument. It is recorded separately for each instrument, and is used as the measure of a member's competency on that instrument.
 * **Mainstream OS**: Windows, Linux, Unix, or macOS.
@@ -652,10 +659,71 @@ Use a disposable directory with only these four records, added in this order:
 
 1. _{ more test cases …​ }_
 
+### Undoing and redoing changes
+
+Start from the sample data in a disposable directory (delete `data/addressbook.json` before launching).
+
+1. Run `delete 1`, then `delete 1` again, then `undo 2`.<br>
+   Expected: `Undid the 2 most recent changes.` Alex Yeoh and Bernice Yu are back, and the full list is shown.
+1. Run `redo`, then `redo 1`.<br>
+   Expected: The first `redo` deletes Alex Yeoh again (the most recently undone change); the second deletes Bernice Yu again.
+1. Run `undo 5`.<br>
+   Expected: `Not enough changes to undo: only 2 can be undone.` Nothing changes.
+1. Run `undo 0`, `undo -1`, `undo two` and `undo 1 2`.<br>
+   Expected: Each shows invalid-format feedback with the `undo` usage, and nothing changes. Try the same inputs with `redo`.
+1. Run `undo` (Bernice Yu is back as the first member), then `edit 1 n/Bernice Yu`, then `redo`.<br>
+   Expected: The edit reports success, and `redo` then shows `There is no undone change to redo.` because the edit counts as a new change.
+1. Run `filter s/member`, then `undo`.<br>
+   Expected: The last change is undone, and the full member list is shown instead of the filtered results.
+1. Close and reopen the app, then run `undo`.<br>
+   Expected: `There is no change to undo.` The undo history is not kept between runs, but the undone and redone data is.
+
 ### Saving data
 
-1. Dealing with missing/corrupted data files
+Use a disposable folder containing the packaged `HiveMind.jar` for these tests. Open a terminal in that folder and run
+`java -jar HiveMind.jar`. Do not perform these tests using real member data.
 
-   1. _{Explain how to simulate missing or corrupted data files and state the expected behavior.}_
+1. Starting without a data file
 
-1. _{ more test cases …​ }_
+   1. Ensure that the disposable folder does not contain `data/addressbook.json`, then start HiveMind.<br>
+      Expected: HiveMind starts with the sample members. No `data/addressbook.json` is created yet.
+
+   1. Run `add n/Persistence Test p/81234567 e/persistence@example.com s/member`, then exit HiveMind.<br>
+      Expected: The member is added and `data/addressbook.json` is created. Copy this valid file to
+      `valid-addressbook.json` in the disposable folder for the restoration test below.
+
+1. Starting with a corrupted data file
+
+   1. Ensure HiveMind is closed, then replace the contents of `data/addressbook.json` with `{` and restart HiveMind.<br>
+      Expected: HiveMind displays an empty directory and a startup warning explaining that the data file could not be
+      loaded, where its backup was created, and that saving is disabled. In a clean test folder, the backup is
+      `data/addressbook.json.bak-01` and contains the same `{` as the corrupted original.
+
+   1. Run `add n/Recovery Check p/81234568 e/recovery@example.com s/member`.<br>
+      Expected: HiveMind reports that the change could not be saved. The recovered directory remains empty, and both
+      `addressbook.json` and its backup remain unchanged.
+
+1. Restoring a valid data file
+
+   1. Close HiveMind, replace `data/addressbook.json` with the saved `valid-addressbook.json`, and restart HiveMind.<br>
+      Expected: The previously saved members, including `Persistence Test`, are loaded without a recovery warning.
+
+   1. Run `add n/Restoration Check p/81234569 e/restoration@example.com s/member`.<br>
+      Expected: The member is added successfully and the restored `data/addressbook.json` is updated, confirming that
+      saving was re-enabled for the new session.
+
+1. Rolling back a change that cannot be saved
+
+   1. While HiveMind is running with valid data, copy `data/addressbook.json` to `before-save-failure.json`. Make
+      `data/addressbook.json` read-only using the operating system's file permissions. For example, run
+      `chmod a-w data/addressbook.json` on macOS/Linux or `attrib +R data\addressbook.json` on Windows.
+
+   1. Run `add n/Rollback Check p/81234570 e/rollback@example.com s/member`.<br>
+      Expected: HiveMind reports that the change could not be saved. `Rollback Check` is absent from the displayed
+      directory, showing that the in-memory change was rolled back. `data/addressbook.json` is byte-for-byte identical
+      to `before-save-failure.json`, showing that the previously saved data was preserved.
+
+   1. Restore write permission with `chmod u+w data/addressbook.json` on macOS/Linux or
+      `attrib -R data\addressbook.json` on Windows, then run the same `add` command again.<br>
+      Expected: The command succeeds and `Rollback Check` is saved. Close HiveMind and delete the disposable folder
+      when testing is complete.

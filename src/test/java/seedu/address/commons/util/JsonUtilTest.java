@@ -1,6 +1,7 @@
 package seedu.address.commons.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -37,6 +38,29 @@ public class JsonUtilTest {
         assertEquals(serializableTestClass.getName(), SerializableTestClass.getNameTestValue());
         assertEquals(serializableTestClass.getListOfLocalDateTimes(), SerializableTestClass.getListTestValues());
         assertEquals(serializableTestClass.getMapOfIntegerToString(), SerializableTestClass.getHashMapTestValues());
+    }
+
+    @Test
+    public void fromJsonString_trailingGarbage_throwsIoException() {
+        String json = SerializableTestClass.JSON_STRING_REPRESENTATION + "GARBAGE";
+
+        assertThrows(IOException.class, () -> JsonUtil.fromJsonString(json, SerializableTestClass.class));
+    }
+
+    @Test
+    public void fromJsonString_secondRoot_throwsIoException() {
+        String json = SerializableTestClass.JSON_STRING_REPRESENTATION + "{}";
+
+        assertThrows(IOException.class, () -> JsonUtil.fromJsonString(json, SerializableTestClass.class));
+    }
+
+    @Test
+    public void fromJsonString_trailingWhitespace_returnsObject() throws IOException {
+        String json = SerializableTestClass.JSON_STRING_REPRESENTATION + " \n\t";
+
+        SerializableTestClass deserializedObject = JsonUtil.fromJsonString(json, SerializableTestClass.class);
+
+        assertEquals(SerializableTestClass.getNameTestValue(), deserializedObject.getName());
     }
 
     //TODO: @Test jsonUtil_readJsonStringToObjectInstance_correctObject()

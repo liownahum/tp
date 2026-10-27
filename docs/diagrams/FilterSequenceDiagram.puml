@@ -14,6 +14,7 @@ box Model MODEL_COLOR_T1
 participant "p:PersonMatchesFilterPredicate" as Predicate MODEL_COLOR
 participant "m:Model" as Model MODEL_COLOR
 participant "filteredPersons:FilteredList" as FilteredList MODEL_COLOR
+participant "sortedPersons:SortedList" as SortedList MODEL_COLOR
 end box
 
 [-> LogicManager : execute("filter s/member i/Violin:3\nty/teacher r/Conductor g/Chamber Orchestra")
@@ -84,14 +85,19 @@ deactivate FilteredList
 Model --> FilterCommand
 deactivate Model
 
+note over FilteredList, SortedList
+SortedList wraps filteredPersons
+and retains the selected ordering.
+end note
+
 FilterCommand -> Model : getFilteredPersonList()
 activate Model
-Model --> FilterCommand : filteredPersons
+Model --> FilterCommand : sortedPersons
 deactivate Model
-FilterCommand -> FilteredList : size()
-activate FilteredList
-FilteredList --> FilterCommand : count
-deactivate FilteredList
+FilterCommand -> SortedList : size()
+activate SortedList
+SortedList --> FilterCommand : count
+deactivate SortedList
 
 create CommandResult
 FilterCommand -> CommandResult : new CommandResult(formatted count message)

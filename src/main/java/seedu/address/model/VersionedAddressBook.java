@@ -24,15 +24,15 @@ public class VersionedAddressBook extends AddressBook {
     }
 
     /**
-     * Records the current data as a new state, discarding any states after the current one.
-     * Does nothing if the data is unchanged since the current state, so commands that do not
-     * modify data do not create empty undo steps.
+     * Discards any states after the current one, then records the current data as a new state.
+     * No new state is recorded if the data is unchanged since the current state, so commands that
+     * do not modify data do not create empty undo steps.
      */
     public void commit() {
+        addressBookStateList.subList(currentStatePointer + 1, addressBookStateList.size()).clear();
         if (!hasUncommittedChanges()) {
             return;
         }
-        addressBookStateList.subList(currentStatePointer + 1, addressBookStateList.size()).clear();
         addressBookStateList.add(new AddressBook(this));
         currentStatePointer++;
         assert currentStatePointer == addressBookStateList.size() - 1;
@@ -57,6 +57,20 @@ public class VersionedAddressBook extends AddressBook {
         assert !hasUncommittedChanges() : "Uncommitted changes would be lost by undo";
         currentStatePointer--;
         resetData(addressBookStateList.get(currentStatePointer));
+    }
+
+    /**
+     * Returns the number of changes that {@link #undo()} can revert one after another.
+     */
+    public int getUndoableCount() {
+        return currentStatePointer;
+    }
+
+    /**
+     * Returns the number of undone changes that {@link #redo()} can restore one after another.
+     */
+    public int getRedoableCount() {
+        return addressBookStateList.size() - 1 - currentStatePointer;
     }
 
     /**

@@ -34,16 +34,25 @@ import seedu.address.ui.UiManager;
 public class MainApp extends Application {
 
     public static final String VERSION = "V0.5.1";
+    public static final Path IMPORT_DIRECTORY = Paths.get("imports");
 
     private static final Logger logger = LogsCenter.getLogger(MainApp.class);
     private static final Path USER_PREFS_FILE_PATH = Paths.get("preferences.json");
     private static final Path ADDRESS_BOOK_FILE_PATH = Paths.get("data", "addressbook.json");
-    private static final Path IMPORT_DIRECTORY = Paths.get("imports");
 
     protected Ui ui;
     protected Logic logic;
     protected Storage storage;
     protected Model model;
+
+    private Optional<String> startupMessage = Optional.empty();
+
+    /**
+     * Returns the directory that holds CSV files available for import.
+     */
+    protected Path getImportDirectory() {
+        return IMPORT_DIRECTORY;
+    }
 
     @Override
     public void init() throws Exception {
@@ -78,19 +87,13 @@ public class MainApp extends Application {
     }
 
     /**
-     * Returns the directory that holds CSV files available for import.
-     */
-    protected Path getImportDirectory() {
-        return IMPORT_DIRECTORY;
-    }
-
-    /**
      * Returns a {@code ModelManager} with the data from {@code storage}'s address book and {@code userPrefs}. <br>
      * The data from the sample address book will be used instead if {@code storage}'s address book is not found,
      * or an empty address book will be used instead if errors occur when reading {@code storage}'s address book.
      */
     protected Model initModelManager(StorageManager storage, ReadOnlyUserPrefs userPrefs) {
         logger.info("Using data file : " + storage.getAddressBookFilePath());
+        startupMessage = Optional.empty();
 
         Optional<ReadOnlyAddressBook> addressBookOptional;
         ReadOnlyAddressBook initialData;
@@ -103,8 +106,8 @@ public class MainApp extends Application {
             initialData = addressBookOptional.orElseGet(SampleDataUtil::getSampleAddressBook);
         } catch (DataLoadingException e) {
             logger.warning("Data file at " + storage.getAddressBookFilePath() + " could not be loaded."
-                    + " The original file will be backed up and address book saving disabled.");
-            backupUnreadableAddressBook(storage);
+                    + " A backup will be attempted and address book saving disabled.");
+            startupMessage = Optional.of(recoverFromUnreadableAddressBook(storage));
             initialData = new AddressBook();
         }
 
@@ -113,17 +116,28 @@ public class MainApp extends Application {
 
     /**
      * Preserves an unreadable address book before starting with an empty in-memory model.
+     *
+     * @return a message explaining the recovery state to the user.
      */
-    private void backupUnreadableAddressBook(StorageManager storage) {
+    private String recoverFromUnreadableAddressBook(StorageManager storage) {
+        storage.disableAddressBookSaving();
+        String backupStatus;
         try {
             Path backupPath = storage.backupAddressBook();
-            storage.disableAddressBookSaving();
             logger.warning("Backed up unreadable address book to " + backupPath
                     + ". Address book changes are disabled until the data file is repaired.");
+            backupStatus = "A backup was created at " + backupPath.toAbsolutePath() + ".";
         } catch (IOException ioe) {
-            throw new IllegalStateException("Could not back up unreadable address book at "
-                    + storage.getAddressBookFilePath(), ioe);
+            logger.warning("Could not back up unreadable address book at "
+                    + storage.getAddressBookFilePath() + ". Address book changes are disabled: "
+                    + StringUtil.getDetails(ioe));
+            backupStatus = "A backup could not be created: " + ioe.getMessage();
         }
+
+        return "The data file at " + storage.getAddressBookFilePath().toAbsolutePath()
+                + " could not be loaded.\n" + backupStatus
+                + "\nHiveMind has opened an empty recovery directory. Changes cannot be saved until the original "
+                + "data file is repaired or restored and HiveMind is restarted.";
     }
 
     /**
@@ -162,6 +176,7 @@ public class MainApp extends Application {
     public void start(Stage primaryStage) {
         logger.info("Starting AddressBook " + MainApp.VERSION);
         ui.start(primaryStage);
+        startupMessage.ifPresent(ui::showStartupMessage);
     }
 
     @Override

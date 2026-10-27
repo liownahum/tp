@@ -70,8 +70,8 @@ public class AddressBookParser {
             case ExportCommand.COMMAND_WORD -> new ExportCommand();
             case HelpCommand.COMMAND_WORD -> new HelpCommand();
             case SortCommand.COMMAND_WORD -> new SortCommandParser().parse(arguments);
-            case UndoCommand.COMMAND_WORD -> new UndoCommand();
-            case RedoCommand.COMMAND_WORD -> new RedoCommand();
+            case UndoCommand.COMMAND_WORD -> new UndoCommandParser().parse(arguments);
+            case RedoCommand.COMMAND_WORD -> new RedoCommandParser().parse(arguments);
             default -> {
                 logger.finer("This user input caused a ParseException: " + userInput);
                 throw new ParseException(MESSAGE_UNKNOWN_COMMAND);

@@ -67,7 +67,9 @@ public class LogicManager implements Logic {
         }
 
         // Only changes that were saved successfully become undoable states
-        model.commitAddressBook();
+        if (command.recordsChange()) {
+            model.commitAddressBook();
+        }
         return commandResult;
     }
 

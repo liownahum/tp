@@ -17,7 +17,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.logging.Logger;
 
+import seedu.address.commons.core.LogsCenter;
 import seedu.address.commons.core.index.Index;
 import seedu.address.commons.util.CollectionUtil;
 import seedu.address.commons.util.ToStringBuilder;
@@ -49,7 +51,7 @@ public class EditCommand extends Command {
             + "[" + PREFIX_PHONE + "PHONE] "
             + "[" + PREFIX_EMAIL + "EMAIL] "
             + "[" + PREFIX_STATUS + "STATUS] "
-            + "[" + PREFIX_MEMBER_TYPE + "STUDENT_OR_TEACHER] "
+            + "[" + PREFIX_MEMBER_TYPE + "TYPE] "
             + "[" + PREFIX_ROLE + "ROLE] "
             + "[" + PREFIX_INSTRUMENT + "INSTRUMENT:YEARS]... "
             + "[" + PREFIX_GROUP + "GROUP]...\n"
@@ -62,6 +64,8 @@ public class EditCommand extends Command {
     public static final String MESSAGE_EDIT_PERSON_SUCCESS = "Edited person: %1$s";
     public static final String MESSAGE_NOT_EDITED = "At least one field to edit must be provided.";
     public static final String MESSAGE_DUPLICATE_PERSON = "This person already exists in the address book.";
+
+    private static final Logger logger = LogsCenter.getLogger(EditCommand.class);
 
     private final Index index;
     private final EditPersonDescriptor editPersonDescriptor;
@@ -96,6 +100,11 @@ public class EditCommand extends Command {
 
         model.setPerson(personToEdit, editedPerson);
         model.updateFilteredPersonList(PREDICATE_SHOW_ALL_PERSONS);
+        if (editPersonDescriptor.getGroups().isPresent()) {
+            // LogicManager persists the edit after this command returns, so this records the request only.
+            logger.info(() -> String.format("Participation group edit requested: %d groups before, %d groups after",
+                    personToEdit.getGroups().size(), editedPerson.getGroups().size()));
+        }
         return new CommandResult(String.format(MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson)));
     }
 

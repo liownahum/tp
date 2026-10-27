@@ -70,6 +70,39 @@ public class SortCommandTest {
     }
 
     @Test
+    public void execute_repeatedNameWhitespace_sortsAlphabeticallyWithoutChangingNames() {
+        Person zebra = new PersonBuilder().withName("Amy  Zebra").build();
+        Person adams = new PersonBuilder().withName("Amy Adams").build();
+        Person brown = new PersonBuilder().withName("Amy Brown").build();
+        Person zulu = new PersonBuilder().withName("Amy Zulu").build();
+        AddressBook directory = new AddressBookBuilder()
+                .withPerson(zebra).withPerson(adams).withPerson(brown).withPerson(zulu).build();
+        ModelManager whitespaceModel = new ModelManager(directory, new UserPrefs());
+
+        new SortCommand(SortKey.NAME).execute(whitespaceModel);
+
+        assertEquals(List.of(adams, brown, zebra, zulu), whitespaceModel.getFilteredPersonList());
+        assertEquals("Amy  Zebra", whitespaceModel.getFilteredPersonList().get(2).getName().fullName);
+        assertEquals(List.of(zebra, adams, brown, zulu), whitespaceModel.getAddressBook().getPersonList());
+    }
+
+    @Test
+    public void execute_equivalentNamesWithDifferentWhitespace_preservesDirectoryOrder() {
+        Person first = new PersonBuilder().withName("Amy   Zebra").build();
+        Person second = new PersonBuilder().withName("amy Zebra").build();
+        Person third = new PersonBuilder().withName("AMY  Zebra").build();
+        AddressBook directory = new AddressBookBuilder()
+                .withPerson(first).withPerson(second).withPerson(third).build();
+        ModelManager whitespaceModel = new ModelManager(directory, new UserPrefs());
+
+        new SortCommand(SortKey.NAME).execute(whitespaceModel);
+        new SortCommand(SortKey.NAME).execute(whitespaceModel);
+
+        assertEquals(List.of(first, second, third), whitespaceModel.getFilteredPersonList());
+        assertEquals(List.of(first, second, third), whitespaceModel.getAddressBook().getPersonList());
+    }
+
+    @Test
     public void execute_filteredList_preservesFilterAndSortingAcrossFind() throws Exception {
         AddressBookParser parser = new AddressBookParser();
         parser.parseCommand("find zoe bob").execute(model);

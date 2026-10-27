@@ -1,6 +1,8 @@
 package seedu.address.storage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static seedu.address.storage.JsonAdaptedPerson.MESSAGE_NULL_INSTRUMENT;
 import static seedu.address.storage.JsonAdaptedPerson.MISSING_FIELD_MESSAGE_FORMAT;
 import static seedu.address.testutil.Assert.assertThrows;
 import static seedu.address.testutil.TypicalPersons.BENSON;
@@ -128,6 +130,15 @@ public class JsonAdaptedPersonTest {
     }
 
     @Test
+    public void toModelType_nullInstrument_throwsIllegalValueException() {
+        List<JsonAdaptedInstrument> instruments = new ArrayList<>(VALID_INSTRUMENTS);
+        instruments.add(null);
+        JsonAdaptedPerson person = adaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL, instruments);
+
+        assertThrows(IllegalValueException.class, MESSAGE_NULL_INSTRUMENT, person::toModelType);
+    }
+
+    @Test
     public void toModelType_missingGroups_returnsPersonWithoutGroups() throws Exception {
         String json = "{\"name\":\"" + VALID_NAME + "\",\"phone\":\"" + VALID_PHONE
                 + "\",\"email\":\"" + VALID_EMAIL + "\",\"status\":\"" + VALID_STATUS
@@ -205,6 +216,13 @@ public class JsonAdaptedPersonTest {
         JsonAdaptedPerson person = new JsonAdaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL,
                 VALID_STATUS, VALID_MEMBER_TYPE, "  ", VALID_INSTRUMENTS);
         assertThrows(IllegalValueException.class, Role.MESSAGE_CONSTRAINTS, person::toModelType);
+    }
+
+    @Test
+    public void toModelType_unicodeSpaceOnlyRole_returnsPersonWithoutRole() throws Exception {
+        JsonAdaptedPerson person = new JsonAdaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL,
+                VALID_STATUS, VALID_MEMBER_TYPE, "\u00A0\u2007", VALID_INSTRUMENTS);
+        assertTrue(person.toModelType().getRole().isEmpty());
     }
 
     @Test

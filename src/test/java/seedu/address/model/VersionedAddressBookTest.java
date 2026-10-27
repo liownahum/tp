@@ -128,6 +128,34 @@ public class VersionedAddressBookTest {
     }
 
     @Test
+    public void getUndoableAndRedoableCount_afterCommitsAndUndo_countsStates() {
+        VersionedAddressBook vab = new VersionedAddressBook(new AddressBook());
+        assertEquals(0, vab.getUndoableCount());
+        assertEquals(0, vab.getRedoableCount());
+        vab.addPerson(ALICE);
+        vab.commit();
+        vab.addPerson(BENSON);
+        vab.commit();
+        assertEquals(2, vab.getUndoableCount());
+        assertEquals(0, vab.getRedoableCount());
+        vab.undo();
+        assertEquals(1, vab.getUndoableCount());
+        assertEquals(1, vab.getRedoableCount());
+    }
+
+    @Test
+    public void commit_noChangeAfterUndo_discardsUndoneStates() {
+        VersionedAddressBook vab = new VersionedAddressBook(new AddressBook());
+        vab.addPerson(ALICE);
+        vab.commit();
+        vab.undo();
+        vab.commit();
+        assertFalse(vab.canRedo());
+        assertFalse(vab.canUndo());
+        assertEquals(bookOf(), vab);
+    }
+
+    @Test
     public void equals_variousScenarios() {
         VersionedAddressBook vab1 = new VersionedAddressBook(new AddressBook());
         VersionedAddressBook vab2 = new VersionedAddressBook(new AddressBook());

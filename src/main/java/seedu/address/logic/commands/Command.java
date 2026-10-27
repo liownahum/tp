@@ -24,4 +24,13 @@ public abstract class Command {
     public boolean requiresSave() {
         return true;
     }
+
+    /**
+     * Returns whether a successful execution of this command is recorded as a change in the undo history.
+     * Recording a change discards any undone changes, even if the data is unchanged.
+     * Commands that only move through the undo history should override this to return false.
+     */
+    public boolean recordsChange() {
+        return true;
+    }
 }

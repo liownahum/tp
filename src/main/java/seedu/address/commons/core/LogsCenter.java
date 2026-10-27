@@ -85,11 +85,20 @@ public class LogsCenter {
         baseLogger.addHandler(consoleHandler);
 
         // add a FileHandler to log to a file
+        addFileHandler(baseLogger, LOG_FILE);
+    }
+
+    /**
+     * Adds a {@code FileHandler} that writes to {@code logFile} to {@code logger}.
+     * If the file cannot be opened (e.g. the folder is write-protected), logs a warning through {@code logger}
+     * and continues without file logging, so that the app can still start.
+     */
+    static void addFileHandler(Logger logger, String logFile) {
         try {
-            FileHandler fileHandler = new FileHandler(LOG_FILE, MAX_FILE_SIZE_IN_BYTES, MAX_FILE_COUNT, true);
+            FileHandler fileHandler = new FileHandler(logFile, MAX_FILE_SIZE_IN_BYTES, MAX_FILE_COUNT, true);
             fileHandler.setFormatter(new SimpleFormatter());
             fileHandler.setLevel(Level.ALL);
-            baseLogger.addHandler(fileHandler);
+            logger.addHandler(fileHandler);
         } catch (IOException e) {
             logger.warning("Error adding file handler for logger.");
         }

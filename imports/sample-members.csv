@@ -1,8 +1,10 @@
 name,phone,email,status,memberType,role,instruments,groups
-"Alicia Tan","91234567","alicia.tan@example.com","member","student","Section Leader","Violin:8;Piano:5","Orchestra;Leadership Team"
+"Alicia Tan","91234567","alicia.tan@example.com","member","student","Section Leader
+Student Conductor","Violin:8;Piano:5","Orchestra;Leadership Team"
 "B","92345678","benjamin.lee@example.com","active-alumnus","teacher","Music Director","Cello:15;Double Bass:0","Orchestra;Alumni Mentors"
 "Chloe Lim","93456789","chloe.lim@example.com","member","student","","","Concert Band;Library Committee"
 "Daniel Wong","94567890","daniel.wong@example.com","inactive-alumnus","student","Former Treasurer","Trumpet:7;Piano:4","Concert Band;Finance Team"
-"Evelyn Goh","95678901","evelyn.goh@example.com","member","teacher","Vocal Coach","Voice:12;Piano:9","Choir;Alumni Mentors"
+"Evelyn Goh","95678901","evelyn.goh@example.com","member","teacher","Vocal Coach
+Choir Mentor","Voice:12;Piano:9","Choir;Alumni Mentors"
 "Farid Rahman","96789012","farid.rahman@example.com","member","student","Percussion Captain","Drums:8;Marimba:5","Concert Band;Leadership Team"
 "Grace Ng","97890123","grace.ng@example.com","active-alumnus","teacher","String Coach","Viola:14;Violin:11","Orchestra;Alumni Mentors"

@@ -155,6 +155,11 @@ public class MainWindow extends UiPart<Stage> {
         primaryStage.show();
     }
 
+    /** Shows a message that was generated while the application was starting. */
+    void showStartupMessage(String message) {
+        resultDisplay.setFeedbackToUser(message);
+    }
+
     /**
      * Closes the application.
      */

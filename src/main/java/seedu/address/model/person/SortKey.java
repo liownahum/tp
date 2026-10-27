@@ -6,7 +6,8 @@ import java.util.Comparator;
  * Supported display ordering keys and their comparators.
  */
 public enum SortKey {
-    NAME("name", Comparator.comparing(person -> person.getName().fullName, String.CASE_INSENSITIVE_ORDER)),
+    NAME("name", Comparator.comparing(person -> person.getName().fullName.replaceAll("\\s+", " "),
+            String.CASE_INSENSITIVE_ORDER)),
     STATUS("status", Comparator.comparingInt(person -> statusRank(person.getStatus())));
 
     private final String keyword;

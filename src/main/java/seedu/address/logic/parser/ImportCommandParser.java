@@ -4,6 +4,7 @@ import static seedu.address.logic.Messages.MESSAGE_INVALID_COMMAND_FORMAT;
 
 import java.util.Locale;
 
+import seedu.address.commons.util.FileUtil;
 import seedu.address.logic.commands.ImportCommand;
 import seedu.address.logic.parser.exceptions.ParseException;
 
@@ -20,8 +21,13 @@ public class ImportCommandParser implements Parser<ImportCommand> {
     @Override
     public ImportCommand parse(String args) throws ParseException {
         String fileName = args.trim();
-        if (fileName.isEmpty() || fileName.contains("/") || fileName.contains("\\")
-                || !fileName.toLowerCase(Locale.ROOT).endsWith(".csv")) {
+        if (fileName.isEmpty()) {
+            throw new ParseException(String.format(MESSAGE_INVALID_COMMAND_FORMAT, ImportCommand.MESSAGE_USAGE));
+        }
+        if (!FileUtil.isValidWindowsFileName(fileName)) {
+            throw new ParseException(ImportCommand.MESSAGE_INVALID_FILENAME);
+        }
+        if (!fileName.toLowerCase(Locale.ROOT).endsWith(".csv")) {
             throw new ParseException(String.format(MESSAGE_INVALID_COMMAND_FORMAT, ImportCommand.MESSAGE_USAGE));
         }
         return new ImportCommand(fileName);

@@ -54,6 +54,24 @@ public class JsonAddressBookStorageTest {
     }
 
     @Test
+    public void readAddressBook_nullRoot_throwsDataLoadingException() throws IOException {
+        Path filePath = testFolder.resolve("nullRootAddressBook.json");
+        Files.writeString(filePath, "null");
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(filePath);
+
+        assertThrows(DataLoadingException.class, storage::readAddressBook);
+    }
+
+    @Test
+    public void readAddressBook_nullPerson_throwsDataLoadingException() throws IOException {
+        Path filePath = testFolder.resolve("nullPersonAddressBook.json");
+        Files.writeString(filePath, "{\"persons\":[null]}");
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(filePath);
+
+        assertThrows(DataLoadingException.class, storage::readAddressBook);
+    }
+
+    @Test
     public void readAddressBook_invalidPersonAddressBook_throwDataLoadingException() {
         assertThrows(DataLoadingException.class, () -> readAddressBook("invalidPersonAddressBook.json"));
     }

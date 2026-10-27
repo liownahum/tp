@@ -29,6 +29,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import seedu.address.logic.commands.AddCommand;
 import seedu.address.logic.commands.CommandResult;
+import seedu.address.logic.commands.EditCommand;
 import seedu.address.logic.commands.ListCommand;
 import seedu.address.logic.commands.RedoCommand;
 import seedu.address.logic.commands.UndoCommand;
@@ -246,6 +247,67 @@ public class LogicManagerTest {
         logic.execute(AddCommand.COMMAND_WORD + NAME_DESC_BOB + PHONE_DESC_BOB + EMAIL_DESC_BOB + STATUS_DESC_BOB);
 
         assertCommandSuccess(UndoCommand.COMMAND_WORD, UndoCommand.MESSAGE_SUCCESS, expectedModel);
+    }
+
+    @Test
+    public void execute_undoMultipleWhenSaveFails_keepsAllChangesAndHistory() throws Exception {
+        logic.execute(AddCommand.COMMAND_WORD + NAME_DESC_AMY + PHONE_DESC_AMY + EMAIL_DESC_AMY + STATUS_DESC_AMY);
+        logic.execute(AddCommand.COMMAND_WORD + NAME_DESC_BOB + PHONE_DESC_BOB + EMAIL_DESC_BOB + STATUS_DESC_BOB);
+        Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
+        setStorageThatThrowsOnSave(DUMMY_IO_EXCEPTION);
+        String expectedMessage = String.format(LogicManager.FILE_OPS_ERROR_FORMAT, DUMMY_IO_EXCEPTION.getMessage());
+
+        assertCommandFailure(UndoCommand.COMMAND_WORD + " 2", CommandException.class, expectedMessage, expectedModel);
+        assertEquals(2, model.getUndoableChangeCount());
+        assertEquals(0, model.getRedoableChangeCount());
+
+        // the retried undo succeeds once saving works again
+        setUp();
+        assertCommandSuccess(UndoCommand.COMMAND_WORD + " 2",
+                String.format(UndoCommand.MESSAGE_SUCCESS_MULTIPLE, 2), new ModelManager());
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"));
+        assertEquals(List.of(), storage.readAddressBook().orElseThrow().getPersonList());
+    }
+
+    @Test
+    public void execute_redoMultipleWhenSaveFails_keepsHistory() throws Exception {
+        logic.execute(AddCommand.COMMAND_WORD + NAME_DESC_AMY + PHONE_DESC_AMY + EMAIL_DESC_AMY + STATUS_DESC_AMY);
+        logic.execute(AddCommand.COMMAND_WORD + NAME_DESC_BOB + PHONE_DESC_BOB + EMAIL_DESC_BOB + STATUS_DESC_BOB);
+        Model modelWithAmyAndBob = new ModelManager(model.getAddressBook(), new UserPrefs());
+        logic.execute(UndoCommand.COMMAND_WORD + " 2");
+        setStorageThatThrowsOnSave(DUMMY_IO_EXCEPTION);
+        String expectedMessage = String.format(LogicManager.FILE_OPS_ERROR_FORMAT, DUMMY_IO_EXCEPTION.getMessage());
+
+        assertCommandFailure(RedoCommand.COMMAND_WORD + " 2", CommandException.class, expectedMessage,
+                new ModelManager());
+        assertEquals(2, model.getRedoableChangeCount());
+
+        setUp();
+        assertCommandSuccess(RedoCommand.COMMAND_WORD + " 2",
+                String.format(RedoCommand.MESSAGE_SUCCESS_MULTIPLE, 2), modelWithAmyAndBob);
+    }
+
+    @Test
+    public void execute_unchangedEditAfterUndo_cannotRedo() throws Exception {
+        logic.execute(AddCommand.COMMAND_WORD + NAME_DESC_AMY + PHONE_DESC_AMY + EMAIL_DESC_AMY + STATUS_DESC_AMY);
+        logic.execute(AddCommand.COMMAND_WORD + NAME_DESC_BOB + PHONE_DESC_BOB + EMAIL_DESC_BOB + STATUS_DESC_BOB);
+        logic.execute(UndoCommand.COMMAND_WORD);
+
+        // an edit that changes nothing is still a new change, so the undone add can no longer be redone
+        logic.execute(EditCommand.COMMAND_WORD + " 1" + NAME_DESC_AMY);
+
+        assertCommandException(RedoCommand.COMMAND_WORD, RedoCommand.MESSAGE_FAILURE);
+        assertEquals(1, model.getUndoableChangeCount());
+    }
+
+    @Test
+    public void execute_failedCommandAfterUndo_canStillRedo() throws Exception {
+        logic.execute(AddCommand.COMMAND_WORD + NAME_DESC_AMY + PHONE_DESC_AMY + EMAIL_DESC_AMY + STATUS_DESC_AMY);
+        logic.execute(UndoCommand.COMMAND_WORD);
+
+        assertThrows(CommandException.class, () -> logic.execute("delete 9"));
+
+        assertEquals(1, model.getRedoableChangeCount());
     }
 
     @Test

@@ -12,7 +12,7 @@ public class SortCommand extends Command {
     public static final String COMMAND_WORD = "sort";
     public static final String MESSAGE_USAGE = COMMAND_WORD
             + ": Sorts the displayed members by name or status.\n"
-            + "Name order: alphabetical, ignoring case.\n"
+            + "Name order: alphabetical, ignoring case and repeated whitespace.\n"
             + "Status order: member, active alumnus, inactive alumnus.\n"
             + "Parameters: name | status\n"
             + "Example: " + COMMAND_WORD + " name";

@@ -14,6 +14,7 @@ box Model MODEL_COLOR_T1
 participant "p:NameContainsKeywordsPredicate" as Predicate MODEL_COLOR
 participant "m:Model" as Model MODEL_COLOR
 participant "filteredPersons:FilteredList" as FilteredList MODEL_COLOR
+participant "sortedPersons:SortedList" as SortedList MODEL_COLOR
 end box
 
 [-> LogicManager : execute("find ali")
@@ -71,14 +72,19 @@ deactivate FilteredList
 Model --> FindCommand
 deactivate Model
 
+note over FilteredList, SortedList
+SortedList wraps filteredPersons
+and retains the selected ordering.
+end note
+
 FindCommand -> Model : getFilteredPersonList()
 activate Model
-Model --> FindCommand : filteredPersons
+Model --> FindCommand : sortedPersons
 deactivate Model
-FindCommand -> FilteredList : size()
-activate FilteredList
-FilteredList --> FindCommand : count
-deactivate FilteredList
+FindCommand -> SortedList : size()
+activate SortedList
+SortedList --> FindCommand : count
+deactivate SortedList
 
 create CommandResult
 FindCommand -> CommandResult : new CommandResult(formatted count message)

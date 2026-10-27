@@ -2,6 +2,7 @@ package seedu.address.logic.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static seedu.address.logic.parser.ParserUtil.MESSAGE_INVALID_COUNT;
 import static seedu.address.logic.parser.ParserUtil.MESSAGE_INVALID_INDEX;
 import static seedu.address.testutil.Assert.assertThrows;
 import static seedu.address.testutil.TypicalIndexes.INDEX_FIRST_PERSON;
@@ -44,6 +45,30 @@ public class ParserUtilTest {
     public void parseIndex_outOfRangeInput_throwsParseException() {
         assertThrows(ParseException.class, MESSAGE_INVALID_INDEX, ()
             -> ParserUtil.parseIndex(Long.toString(Integer.MAX_VALUE + 1)));
+    }
+
+    @Test
+    public void parseCount_invalidInput_throwsParseException() {
+        assertThrows(ParseException.class, MESSAGE_INVALID_COUNT, () -> ParserUtil.parseCount(""));
+        assertThrows(ParseException.class, MESSAGE_INVALID_COUNT, () -> ParserUtil.parseCount("0"));
+        assertThrows(ParseException.class, MESSAGE_INVALID_COUNT, () -> ParserUtil.parseCount("000"));
+        assertThrows(ParseException.class, MESSAGE_INVALID_COUNT, () -> ParserUtil.parseCount("-1"));
+        assertThrows(ParseException.class, MESSAGE_INVALID_COUNT, () -> ParserUtil.parseCount("+1"));
+        assertThrows(ParseException.class, MESSAGE_INVALID_COUNT, () -> ParserUtil.parseCount("1 2"));
+        assertThrows(ParseException.class, MESSAGE_INVALID_COUNT, () -> ParserUtil.parseCount("one"));
+    }
+
+    @Test
+    public void parseCount_validInput_success() throws Exception {
+        assertEquals(1, ParserUtil.parseCount("1"));
+        assertEquals(12, ParserUtil.parseCount("  12  "));
+        assertEquals(3, ParserUtil.parseCount("03"));
+    }
+
+    @Test
+    public void parseCount_tooLargeForInt_returnsMaxValue() throws Exception {
+        assertEquals(Integer.MAX_VALUE, ParserUtil.parseCount(Long.toString(Integer.MAX_VALUE + 1L)));
+        assertEquals(Integer.MAX_VALUE, ParserUtil.parseCount("99999999999999999999"));
     }
 
     @Test
@@ -247,11 +272,16 @@ public class ParserUtilTest {
     public void parseRole_nullOrBlank_throwsException() {
         assertThrows(NullPointerException.class, () -> ParserUtil.parseRole(null));
         assertThrows(ParseException.class, Role.MESSAGE_CONSTRAINTS, () -> ParserUtil.parseRole(" \t "));
+        assertThrows(ParseException.class, Role.MESSAGE_CONSTRAINTS, () -> ParserUtil.parseRole("\u00A0"));
+        assertThrows(ParseException.class, Role.MESSAGE_CONSTRAINTS, () -> ParserUtil.parseRole("\u2007\u202F"));
     }
 
     @Test
     public void parseRole_validValue_returnsTrimmedRole() throws Exception {
         assertEquals(new Role("Section Leader / Conductor"),
                 ParserUtil.parseRole("  Section Leader / Conductor  "));
+        assertEquals(new Role("Vice President"), ParserUtil.parseRole("  Vice   President  "));
+        assertEquals(new Role("Vice President"), ParserUtil.parseRole("Vice\u00A0\u2003 President"));
+        assertEquals(new Role("Vice President"), ParserUtil.parseRole(WHITESPACE + "Vice\t President" + WHITESPACE));
     }
 }

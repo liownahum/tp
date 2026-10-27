@@ -164,6 +164,16 @@ public class AddCommandTest {
         }
 
         @Override
+        public int getUndoableChangeCount() {
+            throw new AssertionError("This method should not be called.");
+        }
+
+        @Override
+        public int getRedoableChangeCount() {
+            throw new AssertionError("This method should not be called.");
+        }
+
+        @Override
         public boolean canRedoAddressBook() {
             throw new AssertionError("This method should not be called.");
         }
