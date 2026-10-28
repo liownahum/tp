@@ -1,6 +1,7 @@
 package seedu.address.logic.parser;
 
 import static seedu.address.logic.Messages.MESSAGE_INVALID_COMMAND_FORMAT;
+import static seedu.address.logic.Messages.MESSAGE_UNKNOWN_PREFIX;
 import static seedu.address.logic.parser.CommandParserTestUtil.assertParseFailure;
 import static seedu.address.logic.parser.CommandParserTestUtil.assertParseSuccess;
 
@@ -26,6 +27,7 @@ public class FilterCommandParserTest {
         assertParseSuccess(parser, "g/Chamber Orchestra", singleGroup);
         assertParseSuccess(parser, "  g/  CHAMBER   orchestra  ", singleGroup);
         assertParseSuccess(parser, "g/Chamber Orchestra g/chamber orchestra", singleGroup);
+        assertParseSuccess(parser, "g/\u00a0Chamber\u2002Orchestra\u202f g/Chamber Orchestra", singleGroup);
 
         FilterCommand multipleGroups = new FilterCommand(Set.of(), Set.of(), Set.of(), Set.of(),
                 Set.of(new Group("Chamber Orchestra"), new Group("Training")));
@@ -47,7 +49,8 @@ public class FilterCommandParserTest {
 
     @Test
     public void parse_blankGroup_throwsParseException() {
-        for (String args : new String[] {"g/", "g/   ", "g/Orchestra g/", "g/ g/Orchestra",
+        for (String args : new String[] {"g/", "g/   ", "g/\u00a0", "g/\u2002\u202f", "g/Orchestra g/\u00a0",
+            "g/Orchestra g/", "g/ g/Orchestra",
             "s/member g/", "i/Violin:3 g/", "ty/teacher g/", "r/Conductor g/"}) {
             assertParseFailure(parser, args, Group.MESSAGE_CONSTRAINTS);
         }
@@ -57,8 +60,8 @@ public class FilterCommandParserTest {
     public void parse_groupWithInvalidCriteria_throwsParseException() {
         String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FilterCommand.MESSAGE_USAGE);
         assertParseFailure(parser, "1 g/Orchestra", expectedMessage);
-        assertParseFailure(parser, "g/Orchestra n/Alice", expectedMessage);
-        assertParseFailure(parser, "g/Orchestra p/91234567 e/alice@example.com", expectedMessage);
+        assertUnknownPrefixRejected("g/Orchestra n/Alice", "n/");
+        assertUnknownPrefixRejected("g/Orchestra p/91234567 e/alice@example.com", "p/");
         assertParseFailure(parser, "g/Orchestra s/unknown", Status.MESSAGE_CONSTRAINTS);
         assertParseFailure(parser, "g/Orchestra ty/unknown", MemberType.MESSAGE_CONSTRAINTS);
         assertParseFailure(parser, "g/Orchestra r/", Role.MESSAGE_CONSTRAINTS);
@@ -78,6 +81,16 @@ public class FilterCommandParserTest {
     }
 
     @Test
+    public void parse_unicodeWhitespaceInInstrumentName_normalizesAndDeduplicatesCriteria() {
+        FilterCommand expected = new FilterCommand(Set.of(),
+                Set.of(new InstrumentCriterion("French Horn", 0)), Set.of(), Set.of(), Set.of());
+        assertParseSuccess(parser, "i/\u00a0French\u2002Horn\u202f i/French Horn", expected);
+        FilterCommand withMinimum = new FilterCommand(Set.of(),
+                Set.of(new InstrumentCriterion("French Horn", 3)), Set.of(), Set.of(), Set.of());
+        assertParseSuccess(parser, "i/\u00a0French\u2002Horn\u202f:3 i/French Horn:3", withMinimum);
+    }
+
+    @Test
     public void parse_missingCriteria_throwsParseException() {
         String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FilterCommand.MESSAGE_USAGE);
         assertParseFailure(parser, "", expectedMessage);
@@ -87,18 +100,66 @@ public class FilterCommandParserTest {
 
     @Test
     public void parse_tagPrefix_throwsParseException() {
-        assertParseFailure(parser, "t/friends",
-                String.format(MESSAGE_INVALID_COMMAND_FORMAT, FilterCommand.MESSAGE_USAGE));
+        assertUnknownPrefixRejected("t/friends", "t/");
     }
 
     @Test
     public void parse_unsupportedPrefix_throwsParseException() {
+        assertUnknownPrefixRejected("s/member n/Alice", "n/");
+        assertUnknownPrefixRejected("ty/student s/member n/Alice", "n/");
+        assertUnknownPrefixRejected("i/Violin n/Alice", "n/");
+        assertUnknownPrefixRejected("i/Violin ty/teacher r/Conductor n/Alice", "n/");
+        assertUnknownPrefixRejected("i/Violin p/91234567 e/alice@example.com", "p/");
+        assertUnknownPrefixRejected("r/Lead e/alice@example.com", "e/");
+        assertUnknownPrefixRejected("n/Alice s/member", "n/");
+        assertUnknownPrefixRejected("p/91234567", "p/");
+        assertUnknownPrefixRejected("e/alice@example.com", "e/");
+    }
+
+    @Test
+    public void parse_removedOrWrongCasePrefixInPreamble_throwsParseException() {
+        assertUnknownPrefixRejected("  a/Somewhere s/member", "a/");
+        for (String prefix : new String[] {"S/", "I/", "TY/", "Ty/", "R/", "G/", "N/", "P/", "E/"}) {
+            assertUnknownPrefixRejected(prefix + "value", prefix);
+            assertUnknownPrefixRejected(prefix + "value s/member", prefix);
+        }
+        assertUnknownPrefixRejected("S/member t/friend", "S/");
+        assertUnknownPrefixRejected("t/friend S/member", "t/");
+    }
+
+    @Test
+    public void parse_slashTextInsideValues_returnsFilterCommand() {
+        for (String role : new String[] {"a/v", "Head of a/v", "Student t/a", "N/A", "Lead S/member",
+            "Lead t/friend", "Lead x/1", "Lead Singer/Songwriter", "Lead c/o Chamber and/or Training"}) {
+            FilterCommand expected = new FilterCommand(Set.of(), Set.of(), Set.of(),
+                    Set.of(new Role(role)), Set.of());
+            assertParseSuccess(parser, "r/" + role, expected);
+            assertParseSuccess(parser, "  r/ " + role + "  ", expected);
+        }
+        FilterCommand expected = new FilterCommand(Set.of(), Set.of(new InstrumentCriterion("Keyboard a/v", 2)),
+                Set.of(), Set.of(new Role("Student t/a")), Set.of(new Group("Chamber a/v")));
+        assertParseSuccess(parser, "r/Student t/a i/Keyboard a/v:2 g/Chamber a/v", expected);
+    }
+
+    @Test
+    public void parse_supportedPrefixAfterRole_startsNewCriterion() {
+        FilterCommand expected = new FilterCommand(Set.of(), Set.of(), Set.of(), Set.of(new Role("Head")),
+                Set.of(new Group("Coach")));
+        assertParseSuccess(parser, "r/Head g/Coach", expected);
+    }
+
+    @Test
+    public void parse_unknownTextInRestrictedValues_throwsFieldValidationException() {
+        assertParseFailure(parser, "s/member t/friend", Status.MESSAGE_CONSTRAINTS);
+        assertParseFailure(parser, "ty/student x/1", MemberType.MESSAGE_CONSTRAINTS);
+        assertParseFailure(parser, "i/Violin:3 x/1", InstrumentCriterion.MESSAGE_MINIMUM_YEARS_CONSTRAINTS);
+    }
+
+    @Test
+    public void parse_arbitraryUnknownPrefixInPreamble_throwsCommandFormatException() {
         String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FilterCommand.MESSAGE_USAGE);
-        assertParseFailure(parser, "s/member n/Alice", expectedMessage);
-        assertParseFailure(parser, "ty/student s/member n/Alice", expectedMessage);
-        assertParseFailure(parser, "i/Violin n/Alice", expectedMessage);
-        assertParseFailure(parser, "i/Violin ty/teacher r/Conductor n/Alice", expectedMessage);
-        assertParseFailure(parser, "i/Violin p/91234567 e/alice@example.com", expectedMessage);
+        assertParseFailure(parser, "x/1", expectedMessage);
+        assertParseFailure(parser, "x/1 s/member", expectedMessage);
     }
 
     @Test
@@ -110,6 +171,8 @@ public class FilterCommandParserTest {
     @Test
     public void parse_invalidInstrument_throwsParseException() {
         assertParseFailure(parser, "i/", Instrument.MESSAGE_NAME_CONSTRAINTS);
+        assertParseFailure(parser, "i/\u00a0", Instrument.MESSAGE_NAME_CONSTRAINTS);
+        assertParseFailure(parser, "i/\u2002\u202f:3", Instrument.MESSAGE_NAME_CONSTRAINTS);
         assertParseFailure(parser, "i/:3", Instrument.MESSAGE_NAME_CONSTRAINTS);
         assertParseFailure(parser, "i/Violin i/", Instrument.MESSAGE_NAME_CONSTRAINTS);
         assertParseFailure(parser, "i/:3 i/Cello", Instrument.MESSAGE_NAME_CONSTRAINTS);
@@ -252,5 +315,12 @@ public class FilterCommandParserTest {
         assertParseFailure(parser, "r/ ", Role.MESSAGE_CONSTRAINTS);
         assertParseFailure(parser, "r/Conductor r/", Role.MESSAGE_CONSTRAINTS);
         assertParseFailure(parser, "ty/teacher r/", Role.MESSAGE_CONSTRAINTS);
+    }
+
+    /**
+     * Asserts that parsing reports the rejected prefix and the prefixes accepted by {@code filter}.
+     */
+    private void assertUnknownPrefixRejected(String args, String prefix) {
+        assertParseFailure(parser, args, String.format(MESSAGE_UNKNOWN_PREFIX, prefix, "s/ i/ ty/ r/ g/"));
     }
 }

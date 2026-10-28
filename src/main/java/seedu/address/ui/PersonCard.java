@@ -1,13 +1,13 @@
 package seedu.address.ui;
 
 import java.util.Comparator;
-import java.util.stream.Collectors;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import seedu.address.model.person.Group;
 import seedu.address.model.person.Instrument;
 import seedu.address.model.person.Person;
@@ -49,7 +49,9 @@ public class PersonCard extends UiPart<Region> {
     @FXML
     private FlowPane instruments;
     @FXML
-    private Label groups;
+    private VBox groups;
+    @FXML
+    private FlowPane groupLabels;
 
     /**
      * Creates a card for the given person at the specified displayed index.
@@ -79,15 +81,27 @@ public class PersonCard extends UiPart<Region> {
 
         person.getInstruments().stream()
                 .sorted(Comparator.comparing(Instrument::getName, String.CASE_INSENSITIVE_ORDER))
-                .forEach(instrument -> instruments.getChildren().add(new Label(instrument.toDisplayString())));
+                .forEach(instrument -> addWrappingLabel(instruments, instrument.toDisplayString()));
+        boolean hasInstruments = !person.getInstruments().isEmpty();
+        instruments.setVisible(hasInstruments);
+        instruments.setManaged(hasInstruments);
 
         boolean hasGroups = !person.getGroups().isEmpty();
-        String groupNames = person.getGroups().stream()
+        person.getGroups().stream()
                 .sorted(Comparator.comparing(Group::getName, String.CASE_INSENSITIVE_ORDER))
-                .map(Group::toString)
-                .collect(Collectors.joining(", "));
-        groups.setText(hasGroups ? "Groups: " + groupNames : "");
+                .forEach(group -> addWrappingLabel(groupLabels, group.getName()));
         groups.setVisible(hasGroups);
         groups.setManaged(hasGroups);
+    }
+
+    /**
+     * Keeps each badge within its flow pane, including long words, as the window is resized.
+     */
+    private static void addWrappingLabel(FlowPane pane, String text) {
+        Label label = new Label(text);
+        label.setWrapText(true);
+        label.setMinWidth(0);
+        label.maxWidthProperty().bind(pane.widthProperty());
+        pane.getChildren().add(label);
     }
 }

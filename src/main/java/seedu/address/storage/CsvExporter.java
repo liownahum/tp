@@ -82,7 +82,8 @@ public class CsvExporter {
     }
 
     private static String escape(String value) {
-        return "\"" + value.replace("\"", "\"\"") + "\"";
+        String encodedValue = CsvCellCodec.encode(value);
+        return "\"" + encodedValue.replace("\"", "\"\"") + "\"";
     }
 
     private static Path getNextAvailablePath(Path exportDirectory) {

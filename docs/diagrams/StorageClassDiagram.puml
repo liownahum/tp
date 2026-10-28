@@ -20,6 +20,16 @@ Class JsonAdaptedPerson
 Class JsonAdaptedInstrument
 }
 
+package "CSV Storage" #F4F6F6{
+Class CsvImporter
+Class CsvExporter
+}
+
+}
+
+package Logic as LogicPackage #F4F6F6 {
+Class ImportCommand LOGIC_COLOR
+Class ExportCommand LOGIC_COLOR
 }
 
 Class HiddenOutside #FFFFFF
@@ -32,5 +42,12 @@ StorageManager -down-> "1" JsonAddressBookStorage
 JsonAddressBookStorage ..> JsonSerializableAddressBook
 JsonSerializableAddressBook --> "*" JsonAdaptedPerson
 JsonAdaptedPerson --> "*" JsonAdaptedInstrument
+
+ImportCommand .up.> CsvImporter : <<call>>
+ExportCommand .up.> CsvExporter : <<call>>
+
+CsvImporter -[hidden]right- CsvExporter
+ImportCommand -[hidden]right- ExportCommand
+StoragePackage -[hidden]down- LogicPackage
 
 @enduml

@@ -116,9 +116,11 @@ public class VersionedAddressBook extends AddressBook {
 
     /**
      * Returns true if the data differs from the current state in the history.
+     * The comparison is exact, so a difference in the capitalisation of instrument or group names
+     * counts as a change.
      */
     private boolean hasUncommittedChanges() {
-        return !equals(addressBookStateList.get(currentStatePointer));
+        return !hasIdenticalData(addressBookStateList.get(currentStatePointer));
     }
 
     /**

@@ -28,8 +28,6 @@ public class ParserUtil {
     public static final String MESSAGE_INVALID_INDEX = "Index must be a positive integer.";
     public static final String MESSAGE_INVALID_COUNT = "Count must be a positive integer.";
 
-    private static final String INSTRUMENT_YEARS_SEPARATOR = ":";
-
     /**
      * Parses {@code oneBasedIndex} into an {@code Index} and returns it. Leading and trailing whitespaces will be
      * trimmed.
@@ -116,26 +114,11 @@ public class ParserUtil {
      */
     public static Instrument parseInstrument(String instrument) throws ParseException {
         requireNonNull(instrument);
-        int separatorIndex = instrument.indexOf(INSTRUMENT_YEARS_SEPARATOR);
-        if (separatorIndex == -1) {
-            throw new ParseException(Instrument.MESSAGE_FORMAT_CONSTRAINTS);
-        }
-
-        String name = parseInstrumentName(instrument.substring(0, separatorIndex));
-        String trimmedYears = instrument.substring(separatorIndex + 1).trim();
-        if (!trimmedYears.matches("\\d+")) {
-            throw new ParseException(Instrument.MESSAGE_YEARS_CONSTRAINTS);
-        }
-        int years;
         try {
-            years = Integer.parseInt(trimmedYears);
-        } catch (NumberFormatException e) {
-            throw new ParseException(Instrument.MESSAGE_YEARS_CONSTRAINTS, e);
+            return Instrument.fromString(instrument);
+        } catch (IllegalArgumentException exception) {
+            throw new ParseException(exception.getMessage(), exception);
         }
-        if (!Instrument.isValidYears(years)) {
-            throw new ParseException(Instrument.MESSAGE_YEARS_CONSTRAINTS);
-        }
-        return new Instrument(name, years);
     }
 
     /**

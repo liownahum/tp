@@ -3,6 +3,7 @@ package seedu.address.testutil;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import seedu.address.model.person.Email;
 import seedu.address.model.person.Group;
@@ -24,6 +25,7 @@ public class PersonBuilder {
     public static final String DEFAULT_PHONE = "85355255";
     public static final String DEFAULT_EMAIL = "amy@gmail.com";
 
+    private UUID id;
     private Name name;
     private Phone phone;
     private Email email;
@@ -37,6 +39,7 @@ public class PersonBuilder {
      * Creates a {@code PersonBuilder} with the default details.
      */
     public PersonBuilder() {
+        id = UUID.randomUUID();
         name = new Name(DEFAULT_NAME);
         phone = new Phone(DEFAULT_PHONE);
         email = new Email(DEFAULT_EMAIL);
@@ -51,6 +54,7 @@ public class PersonBuilder {
      * Initializes the PersonBuilder with the data of {@code personToCopy}.
      */
     public PersonBuilder(Person personToCopy) {
+        id = personToCopy.getId();
         name = personToCopy.getName();
         phone = personToCopy.getPhone();
         email = personToCopy.getEmail();
@@ -137,8 +141,24 @@ public class PersonBuilder {
         return this;
     }
 
+    /**
+     * Gives a copied set of details a distinct member-record identity.
+     */
+    public PersonBuilder withNewId() {
+        id = UUID.randomUUID();
+        return this;
+    }
+
+    /**
+     * Keeps the identity of the selected member when building expected edited details.
+     */
+    public PersonBuilder withId(UUID id) {
+        this.id = id;
+        return this;
+    }
+
     public Person build() {
-        return new Person(name, phone, email, status, memberType, role, instruments, groups);
+        return new Person(id, name, phone, email, status, memberType, role, instruments, groups);
     }
 
 }

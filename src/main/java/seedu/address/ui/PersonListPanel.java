@@ -33,6 +33,13 @@ public class PersonListPanel extends UiPart<Region> {
      * Custom {@code ListCell} that displays the graphics of a {@code Person} using a {@code PersonCard}.
      */
     class PersonListViewCell extends ListCell<Person> {
+        /**
+         * Lets the list viewport determine cell width instead of the longest member detail.
+         */
+        PersonListViewCell() {
+            setPrefWidth(0);
+        }
+
         @Override
         protected void updateItem(Person person, boolean empty) {
             super.updateItem(person, empty);
@@ -41,7 +48,10 @@ public class PersonListPanel extends UiPart<Region> {
                 setGraphic(null);
                 setText(null);
             } else {
-                setGraphic(new PersonCard(person, getIndex() + 1).getRoot());
+                Region card = new PersonCard(person, getIndex() + 1).getRoot();
+                // The cell knows the viewport width; the card must not size itself from long content.
+                card.prefWidthProperty().bind(widthProperty());
+                setGraphic(card);
             }
         }
     }

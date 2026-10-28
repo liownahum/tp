@@ -1,9 +1,18 @@
 package seedu.address.logic.parser;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import seedu.address.logic.Messages;
+import seedu.address.logic.parser.exceptions.ParseException;
 
 /**
  * Tokenizes arguments string of the form: {@code preamble <prefix>value <prefix>value ...}<br>
@@ -14,6 +23,9 @@ import java.util.stream.Collectors;
  *    in the above example.<br>
  */
 public class ArgumentTokenizer {
+
+    /** A token that looks like a prefix: one or two ASCII letters and a slash, e.g. {@code n/} or {@code TY/}. */
+    private static final Pattern PREFIX_LIKE_TOKEN = Pattern.compile("[A-Za-z]{1,2}/");
 
     /**
      * Tokenizes an arguments string and returns an {@code ArgumentMultimap} object that maps prefixes to their
@@ -26,6 +38,82 @@ public class ArgumentTokenizer {
     public static ArgumentMultimap tokenize(String argsString, Prefix... prefixes) {
         List<PrefixPosition> positions = findAllPrefixPositions(argsString, prefixes);
         return extractArguments(argsString, positions);
+    }
+
+    /**
+     * Verifies that {@code argsString} does not contain a prefix that the user most likely mistyped.
+     * <p>
+     * A token is a candidate if it starts the string or follows a space, and is one or two ASCII letters followed by
+     * {@code /}. A candidate that is exactly one of {@code prefixes} is accepted. Otherwise it is rejected if
+     * <ul>
+     *     <li>it is a HiveMind prefix that this command does not accept, or</li>
+     *     <li>it appears before the first accepted prefix, where it would otherwise be read as part of the preamble,
+     *     and it is an accepted prefix in the wrong case (e.g. {@code S/}) or one of the prefixes removed from the
+     *     original AddressBook, {@code t/} or {@code a/}.</li>
+     * </ul>
+     * Inside values, such tokens are kept as text, as values such as {@code N/A}, {@code a/v} or {@code c/o} are common
+     * and cannot be told apart from a mistyped prefix.
+     *
+     * @param argsString Arguments string of the form: {@code preamble <prefix>value <prefix>value ...}
+     * @param prefixes   Prefixes accepted by the command that is parsing {@code argsString}
+     * @throws ParseException if an unknown prefix is found, naming the first unknown prefix by position
+     */
+    public static void verifyNoUnknownPrefixes(String argsString, Prefix... prefixes) throws ParseException {
+        requireNonNull(argsString);
+        requireNonNull(prefixes);
+
+        Set<String> acceptedPrefixes = Arrays.stream(prefixes)
+                .map(Prefix::getPrefix)
+                .collect(Collectors.toSet());
+        String acceptedPrefixList = Arrays.stream(prefixes)
+                .map(Prefix::getPrefix)
+                .collect(Collectors.joining(" "));
+
+        boolean isInPreamble = true;
+        Matcher matcher = PREFIX_LIKE_TOKEN.matcher(argsString);
+        while (matcher.find()) {
+            // the tokenizer only recognises a prefix that follows a space, so other characters do not start a token
+            boolean isAtStartOfWord = matcher.start() == 0 || argsString.charAt(matcher.start() - 1) == ' ';
+            if (!isAtStartOfWord) {
+                continue;
+            }
+
+            String token = matcher.group();
+            if (acceptedPrefixes.contains(token)) {
+                isInPreamble = false;
+                continue;
+            }
+            if (isUnknownPrefix(token, isInPreamble)) {
+                throw new ParseException(
+                        String.format(Messages.MESSAGE_UNKNOWN_PREFIX, token, acceptedPrefixList));
+            }
+        }
+    }
+
+    /**
+     * Returns true if {@code token}, which is not exactly an accepted prefix, should be rejected as an unknown prefix.
+     *
+     * @see #verifyNoUnknownPrefixes(String, Prefix...)
+     */
+    private static boolean isUnknownPrefix(String token, boolean isInPreamble) {
+        if (containsPrefix(CliSyntax.REMOVED_PREFIXES, token)) {
+            return isInPreamble;
+        }
+        String lowercaseToken = token.toLowerCase(Locale.ROOT);
+        if (!containsPrefix(CliSyntax.ALL_PREFIXES, lowercaseToken)) {
+            return false;
+        }
+        // a HiveMind prefix typed exactly is the real prefix, so the command does not accept it;
+        // a wrong-case one may be ordinary text such as N/A, unless it would be read as part of the preamble
+        boolean isExactPrefix = token.equals(lowercaseToken);
+        return isExactPrefix || isInPreamble;
+    }
+
+    /**
+     * Returns true if any of the given {@code prefixes} has the prefix text {@code prefixText}.
+     */
+    private static boolean containsPrefix(Prefix[] prefixes, String prefixText) {
+        return Arrays.stream(prefixes).anyMatch(prefix -> prefix.getPrefix().equals(prefixText));
     }
 
     /**

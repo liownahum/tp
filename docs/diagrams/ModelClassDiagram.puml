@@ -21,6 +21,7 @@ Class "<<enumeration>>\nStatus" as Status
 Class "<<enumeration>>\nMemberType" as MemberType
 Class Role
 Class Instrument
+Class Group
 
 Class I #FFFFFF
 }
@@ -46,6 +47,7 @@ Person *--> Status
 Person *--> MemberType
 Person *--> "0..1" Role
 Person *--> "*" Instrument
+Person *--> "*" Group
 
 Person -[hidden]up--> I
 UniquePersonList -[hidden]right-> I
@@ -56,6 +58,7 @@ Email -[hidden]right-> Status
 Status -[hidden]right-> MemberType
 MemberType -[hidden]right-> Role
 Role -[hidden]right-> Instrument
+Instrument -[hidden]right-> Group
 
 ModelManager --> "~* filtered" Person
 @enduml

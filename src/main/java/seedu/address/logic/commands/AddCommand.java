@@ -10,6 +10,8 @@ import static seedu.address.logic.parser.CliSyntax.PREFIX_PHONE;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_ROLE;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_STATUS;
 
+import java.util.stream.Collectors;
+
 import seedu.address.commons.util.ToStringBuilder;
 import seedu.address.logic.Messages;
 import seedu.address.logic.commands.exceptions.CommandException;
@@ -29,7 +31,7 @@ public class AddCommand extends Command {
             + PREFIX_PHONE + "PHONE "
             + PREFIX_EMAIL + "EMAIL "
             + PREFIX_STATUS + "STATUS "
-            + "[" + PREFIX_MEMBER_TYPE + "STUDENT_OR_TEACHER] "
+            + "[" + PREFIX_MEMBER_TYPE + "TYPE] "
             + "[" + PREFIX_ROLE + "ROLE] "
             + "[" + PREFIX_INSTRUMENT + "INSTRUMENT:YEARS]... "
             + "[" + PREFIX_GROUP + "GROUP]...\n"
@@ -45,6 +47,8 @@ public class AddCommand extends Command {
 
     public static final String MESSAGE_SUCCESS = "New person added: %1$s";
     public static final String MESSAGE_DUPLICATE_PERSON = "This person already exists in the address book.";
+    public static final String MESSAGE_POSSIBLE_DUPLICATE =
+            "Warning: possible duplicate (matching name or phone number): %s";
 
     private final Person toAdd;
 
@@ -60,12 +64,19 @@ public class AddCommand extends Command {
     public CommandResult execute(Model model) throws CommandException {
         requireNonNull(model);
 
+        // Guard against reusing this command for the same record; matching contact details remain allowed.
         if (model.hasPerson(toAdd)) {
             throw new CommandException(MESSAGE_DUPLICATE_PERSON);
         }
 
+        String warnings = model.getAddressBook().getPersonList().stream()
+                .filter(person -> person.getName().fullName.equalsIgnoreCase(toAdd.getName().fullName)
+                        || person.getPhone().equals(toAdd.getPhone()))
+                .map(person -> String.format(MESSAGE_POSSIBLE_DUPLICATE, Messages.format(person)))
+                .collect(Collectors.joining("\n"));
         model.addPerson(toAdd);
-        return new CommandResult(String.format(MESSAGE_SUCCESS, Messages.format(toAdd)));
+        String success = String.format(MESSAGE_SUCCESS, Messages.format(toAdd));
+        return new CommandResult(warnings.isEmpty() ? success : warnings + "\n" + success);
     }
 
     @Override

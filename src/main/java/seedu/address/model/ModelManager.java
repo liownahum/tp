@@ -6,6 +6,7 @@ import static seedu.address.commons.util.CollectionUtil.requireAllNonNull;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
@@ -27,7 +28,7 @@ public class ModelManager implements Model {
     private final UserPrefs userPrefs;
     private final FilteredList<Person> filteredPersons;
     private final SortedList<Person> sortedPersons;
-    private final Map<Person, Integer> sourcePositions = new HashMap<>();
+    private final Map<UUID, Integer> sourcePositions = new HashMap<>();
 
     /**
      * Initializes a ModelManager with the given addressBook and userPrefs.
@@ -170,7 +171,8 @@ public class ModelManager implements Model {
 
     @Override
     public void updateSortedPersonList(Comparator<Person> comparator) {
-        sortedPersons.setComparator(comparator == null ? null : comparator.thenComparingInt(sourcePositions::get));
+        sortedPersons.setComparator(comparator == null ? null
+                : comparator.thenComparingInt(person -> sourcePositions.get(person.getId())));
     }
 
     /**
@@ -180,7 +182,7 @@ public class ModelManager implements Model {
         sourcePositions.clear();
         ObservableList<Person> persons = addressBook.getPersonList();
         for (int i = 0; i < persons.size(); i++) {
-            sourcePositions.put(persons.get(i), i);
+            sourcePositions.put(persons.get(i).getId(), i);
         }
     }
 

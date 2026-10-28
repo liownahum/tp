@@ -89,8 +89,9 @@ public class ImportCommandTest {
                 .withEmail("existing@example.com").build();
         model.addPerson(existingPerson);
         writeImportFile(HEADER, "Existing Person,81111111,existing@example.com,member,student,,,");
+        String expectedMessage = String.format(ImportCommand.MESSAGE_DUPLICATE_PERSON, "Existing Person", 2);
 
-        assertCommandFailure(new ImportCommand(FILE_NAME), model, ImportCommand.MESSAGE_DUPLICATE_PERSON);
+        assertCommandFailure(new ImportCommand(FILE_NAME), model, expectedMessage);
     }
 
     @Test

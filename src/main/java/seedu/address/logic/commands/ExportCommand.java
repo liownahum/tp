@@ -17,9 +17,14 @@ import seedu.address.storage.CsvExporter;
 public class ExportCommand extends Command {
     public static final String COMMAND_WORD = "export";
 
+    public static final String MESSAGE_USAGE = COMMAND_WORD
+            + ": Exports the people currently shown to a CSV file.\n"
+            + "Example: " + COMMAND_WORD;
+
     public static final String MESSAGE_EXPORT_SUCCESS = "Exported %d people to %s.";
     public static final String MESSAGE_EXPORT_SUCCESS_SINGULAR = "Exported %d person to %s.";
-    public static final String MESSAGE_EXPORT_FAILURE = "Could not export current results: %s";
+    public static final String MESSAGE_EXPORT_FAILURE = "Could not export current results to %s. "
+            + "Make sure the export location is a writable folder.";
 
     private static final Path DEFAULT_EXPORT_DIRECTORY = Path.of("exports");
 
@@ -49,7 +54,7 @@ public class ExportCommand extends Command {
                 String.format(successMessage, currentResults.size(), outputPath));
         } catch (IOException ioe) {
             throw new CommandException(
-                String.format(MESSAGE_EXPORT_FAILURE, ioe.getMessage()), ioe);
+                String.format(MESSAGE_EXPORT_FAILURE, exportDirectory), ioe);
         }
     }
 

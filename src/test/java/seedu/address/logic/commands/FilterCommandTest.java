@@ -42,6 +42,46 @@ public class FilterCommandTest {
     private Model model = new ModelManager(getTypicalAddressBook(), new UserPrefs());
 
     @Test
+    public void execute_editThenFilterGroup_matchesUnicodeWhitespaceInEitherCommand() throws Exception {
+        AddressBookParser parser = new AddressBookParser();
+        for (String whitespace : List.of("\u00a0", "\u2002", "\u2003", "\u2009", "\u202f", "\u3000")) {
+            Model customModel = new ModelManager(getTypicalAddressBook(), new UserPrefs());
+            parser.parseCommand("edit 1 g/" + whitespace + "Chamber" + whitespace + "Orchestra" + whitespace)
+                    .execute(customModel);
+            Person editedPerson = customModel.getFilteredPersonList().getFirst();
+
+            CommandResult result = parser.parseCommand("filter g/Chamber Orchestra").execute(customModel);
+            assertEquals(List.of(editedPerson), customModel.getFilteredPersonList());
+            assertEquals(String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 1), result.getFeedbackToUser());
+
+            result = parser.parseCommand("filter g/" + whitespace + "CHAMBER" + whitespace + "orchestra" + whitespace)
+                    .execute(customModel);
+            assertEquals(List.of(editedPerson), customModel.getFilteredPersonList());
+            assertEquals(String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 1), result.getFeedbackToUser());
+        }
+    }
+
+    @Test
+    public void execute_editThenFilterInstrument_matchesUnicodeWhitespaceInEitherCommand() throws Exception {
+        AddressBookParser parser = new AddressBookParser();
+        for (String whitespace : List.of("\u00a0", "\u2002", "\u2003", "\u2009", "\u202f", "\u3000")) {
+            Model customModel = new ModelManager(getTypicalAddressBook(), new UserPrefs());
+            parser.parseCommand("edit 1 i/" + whitespace + "French" + whitespace + "Horn" + whitespace + ":3")
+                    .execute(customModel);
+            Person editedPerson = customModel.getFilteredPersonList().getFirst();
+
+            CommandResult result = parser.parseCommand("filter i/French Horn").execute(customModel);
+            assertEquals(List.of(editedPerson), customModel.getFilteredPersonList());
+            assertEquals(String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 1), result.getFeedbackToUser());
+
+            result = parser.parseCommand("filter i/" + whitespace + "FRENCH" + whitespace + "horn" + whitespace + ":3")
+                    .execute(customModel);
+            assertEquals(List.of(editedPerson), customModel.getFilteredPersonList());
+            assertEquals(String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 1), result.getFeedbackToUser());
+        }
+    }
+
+    @Test
     public void execute_groups_searchesWholeDirectoryAndListRestoresEveryone() throws Exception {
         Person orchestraMember = new PersonBuilder(ALICE).withGroups("Chamber Orchestra").build();
         Person trainingMember = new PersonBuilder(BENSON).withGroups("Training", "Quartet").build();
@@ -73,12 +113,13 @@ public class FilterCommandTest {
     public void execute_groupsWithOtherFields_requiresEverySpecifiedField() throws Exception {
         Person matching = new PersonBuilder(ALICE).withMemberType("teacher").withRole("Conductor")
                 .withInstruments("Violin:3").withGroups("Orchestra").build();
-        Person wrongGroup = new PersonBuilder(matching).withName("Bob").withGroups("Training").build();
-        Person wrongStatus = new PersonBuilder(matching).withName("Carol").withStatus("inactive-alumnus").build();
-        Person insufficientExperience = new PersonBuilder(matching).withName("Dan").withInstruments("Violin:2")
-                .build();
-        Person wrongType = new PersonBuilder(matching).withName("Eve").withMemberType("student").build();
-        Person wrongRole = new PersonBuilder(matching).withName("Frank").withoutRole().build();
+        Person wrongGroup = new PersonBuilder(matching).withNewId().withName("Bob").withGroups("Training").build();
+        Person wrongStatus = new PersonBuilder(matching).withNewId().withName("Carol")
+                .withStatus("inactive-alumnus").build();
+        Person insufficientExperience = new PersonBuilder(matching).withNewId().withName("Dan")
+                .withInstruments("Violin:2").build();
+        Person wrongType = new PersonBuilder(matching).withNewId().withName("Eve").withMemberType("student").build();
+        Person wrongRole = new PersonBuilder(matching).withNewId().withName("Frank").withoutRole().build();
         AddressBook addressBook = new AddressBook();
         for (Person person : List.of(matching, wrongGroup, wrongStatus, insufficientExperience, wrongType, wrongRole)) {
             addressBook.addPerson(person);
@@ -334,7 +375,7 @@ public class FilterCommandTest {
     public void execute_typeAndRole_searchesWholeDirectoryAndListRestoresEveryone() throws Exception {
         Person teacher = new PersonBuilder().withName("Teacher").withMemberType("teacher")
                 .withRole("Section Leader").withInstruments("Violin:3").build();
-        Person student = new PersonBuilder(teacher).withName("Student").withMemberType("student").build();
+        Person student = new PersonBuilder(teacher).withNewId().withName("Student").withMemberType("student").build();
         AddressBook addressBook = new AddressBook();
         addressBook.addPerson(student);
         addressBook.addPerson(teacher);

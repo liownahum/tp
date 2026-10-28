@@ -14,8 +14,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.geometry.Bounds;
+import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.Region;
+import javafx.scene.text.Text;
 import seedu.address.model.person.Person;
 import seedu.address.testutil.PersonBuilder;
 
@@ -66,9 +71,9 @@ public class PersonCardTest {
             List<String> instrumentLabels = instruments.getChildren().stream()
                     .map(node -> ((Label) node).getText()).toList();
             assertEquals(List.of("piano (5 yrs)", "Violin (1 yr)"), instrumentLabels);
-            assertEquals("Groups: Alpha, zeta", label(card, "groups").getText());
-            assertTrue(label(card, "groups").isVisible());
-            assertTrue(label(card, "groups").isManaged());
+            assertEquals(List.of("Alpha", "zeta"), groupNames(card));
+            assertTrue(card.getRoot().lookup("#groups").isVisible());
+            assertTrue(card.getRoot().lookup("#groups").isManaged());
         });
     }
 
@@ -83,9 +88,22 @@ public class PersonCardTest {
             FlowPane instruments = (FlowPane) card.getRoot().lookup("#instruments");
             assertNotNull(instruments);
             assertTrue(instruments.getChildren().isEmpty());
-            assertEquals("", label(card, "groups").getText());
-            assertFalse(label(card, "groups").isVisible());
-            assertFalse(label(card, "groups").isManaged());
+            assertFalse(instruments.isVisible());
+            assertFalse(instruments.isManaged());
+            assertTrue(groupNames(card).isEmpty());
+            assertFalse(card.getRoot().lookup("#groups").isVisible());
+            assertFalse(card.getRoot().lookup("#groups").isManaged());
+        });
+    }
+
+    @Test
+    public void constructor_groupNameContainingComma_distinguishesSeparateGroups() throws Exception {
+        runOnFxThread(() -> {
+            PersonCard oneGroup = new PersonCard(new PersonBuilder().withGroups("Dance, Music").build(), 1);
+            PersonCard twoGroups = new PersonCard(new PersonBuilder().withGroups("Dance", "Music").build(), 2);
+
+            assertEquals(List.of("Dance, Music"), groupNames(oneGroup));
+            assertEquals(List.of("Dance", "Music"), groupNames(twoGroups));
         });
     }
 
@@ -102,6 +120,57 @@ public class PersonCardTest {
                 }
             }
         });
+    }
+
+    @Test
+    public void layout_longLabelsAtMinimumWidth_keepsAllTextVisibleAfterResizing() throws Exception {
+        runOnFxThread(() -> {
+            String instrument = "Historical Keyboard and String Instrument Ensemble Performance Specialisation";
+            String group = "University Chamber Orchestra Alumni and Student Combined Performance Group";
+            Person person = new PersonBuilder().withName("Card Width")
+                    .withEmail("music.coordinator.long.contact.address@example.com")
+                    .withRole("Student Coordinator for the University Chamber Orchestra")
+                    .withInstruments(instrument + ":12").withGroups(group, "X".repeat(150)).build();
+            Region root = new PersonListPanel(FXCollections.observableArrayList(person)).getRoot();
+            Scene scene = new Scene(root, 450, 600);
+            scene.getStylesheets().add(getClass().getResource("/view/DarkTheme.css").toExternalForm());
+
+            // The list has less space than the window because of the surrounding padding.
+            for (int width : new int[] {400, 450, 800, 400}) {
+                root.resize(width, 600);
+                root.applyCss();
+                root.layout();
+                // Settle the label height after the flow pane receives its new viewport width.
+                root.layout();
+                assertLabelVisible(root, (Label) root.lookup("#instruments .label"), instrument + " (12 yrs)");
+                assertLabelVisible(root, (Label) root.lookup("#email"), person.getEmail().value);
+                assertLabelVisible(root, (Label) root.lookup("#role"), "Role: " + person.getRole().orElseThrow().value);
+                FlowPane groups = (FlowPane) root.lookup("#groupLabels");
+                for (var node : groups.getChildren()) {
+                    Label label = (Label) node;
+                    assertLabelVisible(root, label, label.getText());
+                }
+            }
+        });
+    }
+
+    /**
+     * Checks the laid-out text itself, including absence of truncation, within a real list cell.
+     */
+    private static void assertLabelVisible(Region root, Label label, String expectedText) {
+        assertNotNull(label);
+        Bounds bounds = label.localToScene(label.getBoundsInLocal());
+        assertTrue(bounds.getMinX() >= 0, "Label starts outside the list");
+        assertTrue(bounds.getMaxX() <= root.getWidth(), "Label extends past the list: " + bounds);
+        Text text = (Text) label.lookup(".text");
+        assertNotNull(text);
+        assertEquals(expectedText, text.getText(), "The visible text must not be truncated");
+    }
+
+    private static List<String> groupNames(PersonCard card) {
+        FlowPane labels = (FlowPane) card.getRoot().lookup("#groupLabels");
+        assertNotNull(labels);
+        return labels.getChildren().stream().map(node -> ((Label) node).getText()).toList();
     }
 
     private static Label label(PersonCard card, String id) {

@@ -25,7 +25,7 @@ public final class InstrumentCriterion {
         requireNonNull(name);
         checkArgument(Instrument.isValidName(name), Instrument.MESSAGE_NAME_CONSTRAINTS);
         checkArgument(isValidMinimumYears(minimumYears), MESSAGE_MINIMUM_YEARS_CONSTRAINTS);
-        this.name = name.trim().replaceAll("\\s+", " ");
+        this.name = Instrument.normalizeName(name);
         this.minimumYears = minimumYears;
     }
 

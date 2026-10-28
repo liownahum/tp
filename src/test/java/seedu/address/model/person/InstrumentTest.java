@@ -11,6 +11,43 @@ import org.junit.jupiter.api.Test;
 
 public class InstrumentTest {
 
+    private static final List<String> UNICODE_WHITESPACE = List.of(
+            "\u0085", "\u00a0", "\u1680", "\u2000", "\u2001", "\u2002", "\u2003", "\u2004", "\u2005", "\u2006",
+            "\u2007", "\u2008", "\u2009", "\u200a", "\u2028", "\u2029", "\u202f", "\u205f", "\u3000");
+
+    @Test
+    public void constructor_unicodeWhitespace_normalizesNameAndPreservesYears() {
+        for (String whitespace : UNICODE_WHITESPACE) {
+            Instrument instrument = new Instrument(
+                    whitespace + "French" + whitespace + " \t" + whitespace + "Horn" + whitespace, 3);
+            assertEquals("French Horn", instrument.getName());
+            assertEquals(3, instrument.getYears());
+        }
+    }
+
+    @Test
+    public void constructor_unicodeWhitespaceOnly_throwsIllegalArgumentException() {
+        for (String whitespace : UNICODE_WHITESPACE) {
+            assertFalse(Instrument.isValidName(whitespace));
+            assertThrows(IllegalArgumentException.class,
+                    Instrument.MESSAGE_NAME_CONSTRAINTS, () -> new Instrument(" " + whitespace + "\t", 3));
+        }
+    }
+
+    @Test
+    public void equals_unicodeWhitespace_hasSameHashCodeAndDetectsDuplicateNames() {
+        Instrument instrument = new Instrument("French Horn", 3);
+        for (String whitespace : UNICODE_WHITESPACE) {
+            String equivalentName = whitespace + "french" + whitespace + "horn" + whitespace;
+            Instrument equivalent = new Instrument(equivalentName, 3);
+            assertTrue(instrument.hasName(equivalentName));
+            assertEquals(instrument, equivalent);
+            assertEquals(equivalent, instrument);
+            assertEquals(instrument.hashCode(), equivalent.hashCode());
+            assertTrue(Instrument.hasDuplicateNames(List.of(instrument, new Instrument(equivalentName, 5))));
+        }
+    }
+
     @Test
     public void constructor_nullName_throwsNullPointerException() {
         assertThrows(NullPointerException.class, () -> new Instrument(null, 3));
@@ -58,6 +95,23 @@ public class InstrumentTest {
         assertTrue(Instrument.isValidYears(0)); // boundary
         assertTrue(Instrument.isValidYears(5));
         assertTrue(Instrument.isValidYears(Instrument.MAX_YEARS)); // boundary
+    }
+
+    @Test
+    public void fromString_invalidValue_throwsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, Instrument.MESSAGE_FORMAT_CONSTRAINTS, ()
+            -> Instrument.fromString("Violin"));
+        assertThrows(IllegalArgumentException.class, Instrument.MESSAGE_NAME_CONSTRAINTS, ()
+            -> Instrument.fromString(":5"));
+        assertThrows(IllegalArgumentException.class, Instrument.MESSAGE_YEARS_CONSTRAINTS, ()
+            -> Instrument.fromString("Violin:+5"));
+        assertThrows(IllegalArgumentException.class, Instrument.MESSAGE_YEARS_CONSTRAINTS, ()
+            -> Instrument.fromString("Violin:100"));
+    }
+
+    @Test
+    public void fromString_validValue_returnsInstrument() {
+        assertEquals(new Instrument("Violin", 5), Instrument.fromString(" Violin : 5 "));
     }
 
     @Test
@@ -131,5 +185,30 @@ public class InstrumentTest {
     @Test
     public void toString_returnsNameAndYears() {
         assertEquals("French Horn:3", new Instrument("French Horn", 3).toString());
+    }
+
+    @Test
+    public void isIdenticalTo_sameNameAndYears_returnsTrue() {
+        assertTrue(new Instrument("Violin", 8).isIdenticalTo(new Instrument("Violin", 8)));
+    }
+
+    @Test
+    public void isIdenticalTo_differentCase_returnsFalse() {
+        Instrument violin = new Instrument("Violin", 8);
+        Instrument lowercaseViolin = new Instrument("violin", 8);
+
+        // equals remains case-insensitive
+        assertTrue(violin.equals(lowercaseViolin));
+        assertFalse(violin.isIdenticalTo(lowercaseViolin));
+    }
+
+    @Test
+    public void isIdenticalTo_differentYears_returnsFalse() {
+        assertFalse(new Instrument("Violin", 8).isIdenticalTo(new Instrument("Violin", 9)));
+    }
+
+    @Test
+    public void isIdenticalTo_null_returnsFalse() {
+        assertFalse(new Instrument("Violin", 8).isIdenticalTo(null));
     }
 }

@@ -1,6 +1,8 @@
 package seedu.address.storage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.storage.JsonAdaptedInstrument.MISSING_FIELD_MESSAGE_FORMAT;
 import static seedu.address.testutil.Assert.assertThrows;
 
@@ -13,6 +15,36 @@ import seedu.address.model.person.Instrument;
 public class JsonAdaptedInstrumentTest {
     private static final String VALID_NAME = "Trumpet";
     private static final int VALID_YEARS = 3;
+
+    @Test
+    public void canIgnoreBlankEntry_unicodeBlankNameWithValidYears_returnsTrue() {
+        for (String name : new String[] {"\u00a0", "\u2007", "\u202f", "\u0085", " \u2002\u00a0\t"}) {
+            assertTrue(new JsonAdaptedInstrument(name, VALID_YEARS).canIgnoreBlankEntry());
+        }
+    }
+
+    @Test
+    public void canIgnoreBlankEntry_otherNames_returnsFalse() {
+        for (String name : new String[] {null, "", " ", "\t", "\u2002", ":", "\u00a0:",
+            VALID_NAME, "French\u00a0Horn"}) {
+            assertFalse(new JsonAdaptedInstrument(name, VALID_YEARS).canIgnoreBlankEntry());
+        }
+    }
+
+    @Test
+    public void canIgnoreBlankEntry_validWholeYearsIncludingBoundaries_returnsTrue() {
+        for (Number years : new Number[] {0, Instrument.MAX_YEARS, 3L, (short) 3, (byte) 3}) {
+            assertTrue(new JsonAdaptedInstrument("\u00a0", years).canIgnoreBlankEntry());
+        }
+    }
+
+    @Test
+    public void canIgnoreBlankEntry_missingOrInvalidYears_returnsFalse() {
+        for (Number years : new Number[] {null, -1, Instrument.MAX_YEARS + 1, 3.5, 3.0, 3.0f,
+            4294967299L, Long.MIN_VALUE, Long.MAX_VALUE}) {
+            assertFalse(new JsonAdaptedInstrument("\u00a0", years).canIgnoreBlankEntry());
+        }
+    }
 
     @Test
     public void toModelType_validInstrumentDetails_returnsInstrument() throws Exception {

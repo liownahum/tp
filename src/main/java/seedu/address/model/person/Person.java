@@ -8,6 +8,8 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
+import java.util.function.BiPredicate;
 
 import seedu.address.commons.util.ToStringBuilder;
 
@@ -17,7 +19,12 @@ import seedu.address.commons.util.ToStringBuilder;
  */
 public class Person {
 
-    // Identity fields
+    /**
+     * Stable record identity; contact details may be shared by different members.
+     */
+    private final UUID id;
+
+    // Contact fields
     private final Name name;
     private final Phone phone;
     private final Email email;
@@ -42,8 +49,17 @@ public class Person {
      */
     public Person(Name name, Phone phone, Email email, Status status, MemberType memberType,
             Optional<Role> role, Set<Instrument> instruments, Set<Group> groups) {
-        requireAllNonNull(name, phone, email, status, memberType, role, instruments, groups);
+        this(UUID.randomUUID(), name, phone, email, status, memberType, role, instruments, groups);
+    }
+
+    /**
+     * Restores a saved record or edits an existing one while preserving its identity.
+     */
+    public Person(UUID id, Name name, Phone phone, Email email, Status status, MemberType memberType,
+            Optional<Role> role, Set<Instrument> instruments, Set<Group> groups) {
+        requireAllNonNull(id, name, phone, email, status, memberType, role, instruments, groups);
         checkArgument(!Instrument.hasDuplicateNames(instruments), Instrument.MESSAGE_DUPLICATE_NAMES);
+        this.id = id;
         this.name = name;
         this.phone = phone;
         this.email = email;
@@ -52,6 +68,10 @@ public class Person {
         this.role = role;
         this.instruments.addAll(instruments);
         this.groups.addAll(groups);
+    }
+
+    public UUID getId() {
+        return id;
     }
 
     public Name getName() {
@@ -97,8 +117,8 @@ public class Person {
     }
 
     /**
-     * Returns true if both persons have the same name.
-     * This defines a weaker notion of equality between two persons.
+     * Returns true if both objects represent the same saved member record.
+     * Names and other editable details do not determine identity.
      */
     public boolean isSamePerson(Person otherPerson) {
         if (otherPerson == this) {
@@ -106,12 +126,13 @@ public class Person {
         }
 
         return otherPerson != null
-                && otherPerson.getName().equals(getName());
+                && otherPerson.id.equals(id);
     }
 
     /**
-     * Returns true if both persons have the same identity and data fields.
-     * This defines a stronger notion of equality between two persons.
+     * Compares recorded details, independently of record identity.
+     * This supports data comparisons for undo snapshots and CSV round trips; use
+     * {@link #isSamePerson(Person)} when selecting a particular member record.
      */
     @Override
     public boolean equals(Object other) {
@@ -132,6 +153,25 @@ public class Person {
                 && role.equals(otherPerson.role)
                 && instruments.equals(otherPerson.instruments)
                 && groups.equals(otherPerson.groups);
+    }
+
+    /**
+     * Returns true if both persons are equal and their instrument and group sets match exactly,
+     * including the capitalisation of instrument and group names.
+     * Used to detect changes that {@link #equals(Object)} cannot see.
+     */
+    public boolean hasIdenticalDetails(Person other) {
+        return equals(other)
+                && hasIdenticalElements(instruments, other.instruments, Instrument::isIdenticalTo)
+                && hasIdenticalElements(groups, other.groups, Group::isIdenticalTo);
+    }
+
+    /**
+     * Returns true if every element of {@code first} has an identical partner in {@code second}.
+     * Both sets must already be equal, so they have the same size.
+     */
+    private static <T> boolean hasIdenticalElements(Set<T> first, Set<T> second, BiPredicate<T, T> isIdentical) {
+        return first.stream().allMatch(element -> second.stream().anyMatch(o -> isIdentical.test(element, o)));
     }
 
     @Override

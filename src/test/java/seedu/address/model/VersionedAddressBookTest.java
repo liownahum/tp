@@ -7,9 +7,12 @@ import static seedu.address.testutil.Assert.assertThrows;
 import static seedu.address.testutil.TypicalPersons.ALICE;
 import static seedu.address.testutil.TypicalPersons.BENSON;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import seedu.address.model.person.Person;
+import seedu.address.testutil.PersonBuilder;
 
 public class VersionedAddressBookTest {
 
@@ -256,5 +259,44 @@ public class VersionedAddressBookTest {
         assertTrue(vab.canUndo());
         vab.undo();
         assertEquals(bookOf(), vab);
+    }
+
+    @Test
+    public void commit_instrumentCaseOnlyChange_recordsStateAndUndoRestoresCapitalisation() {
+        AddressBook original = new AddressBook();
+        original.setPersons(List.of(new PersonBuilder(ALICE).withInstruments("Violin:8").build()));
+        VersionedAddressBook versionedAddressBook = new VersionedAddressBook(original);
+
+        Person oldPerson = versionedAddressBook.getPersonList().get(0);
+        Person editedPerson = new PersonBuilder(oldPerson).withInstruments("violin:8").build();
+        versionedAddressBook.setPerson(oldPerson, editedPerson);
+        versionedAddressBook.commit();
+
+        assertTrue(versionedAddressBook.canUndo());
+
+        versionedAddressBook.undo();
+        assertTrue(versionedAddressBook.hasIdenticalData(original));
+    }
+
+    @Test
+    public void commit_groupCaseOnlyChange_recordsStateAndUndoRestoresCapitalisation() {
+        AddressBook original = new AddressBook();
+        original.setPersons(List.of(new PersonBuilder(ALICE).withGroups("Band").build()));
+        VersionedAddressBook versionedAddressBook = new VersionedAddressBook(original);
+
+        Person oldPerson = versionedAddressBook.getPersonList().get(0);
+        versionedAddressBook.setPerson(oldPerson, new PersonBuilder(oldPerson).withGroups("band").build());
+        versionedAddressBook.commit();
+
+        assertTrue(versionedAddressBook.canUndo());
+        versionedAddressBook.undo();
+        assertTrue(versionedAddressBook.hasIdenticalData(original));
+    }
+
+    @Test
+    public void hasIdenticalData_differentNumberOfPersons_returnsFalse() {
+        VersionedAddressBook versionedAddressBook = new VersionedAddressBook(new AddressBook());
+        versionedAddressBook.addPerson(ALICE);
+        assertFalse(versionedAddressBook.hasIdenticalData(new AddressBook()));
     }
 }

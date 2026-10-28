@@ -2,6 +2,7 @@ package seedu.address.logic.parser;
 
 import static java.util.Objects.requireNonNull;
 import static seedu.address.logic.Messages.MESSAGE_INVALID_COMMAND_FORMAT;
+import static seedu.address.logic.Messages.MESSAGE_INVALID_PERSON_DISPLAYED_INDEX;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_EMAIL;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_GROUP;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_INSTRUMENT;
@@ -29,6 +30,15 @@ import seedu.address.model.person.Role;
  */
 public class EditCommandParser implements Parser<EditCommand> {
 
+    /** Prefixes accepted by the {@code edit} command, which accepts every HiveMind prefix. */
+    private static final Prefix[] EDIT_PREFIXES = CliSyntax.ALL_PREFIXES;
+
+    /**
+     * Matches an optionally signed integer, e.g. {@code 1}, {@code -3} or {@code +1}.
+     * Any Unicode decimal digit is allowed, as {@link ParserUtil#parseIndex(String)} accepts them too.
+     */
+    private static final String SIGNED_INTEGER_REGEX = "[+-]?\\p{Nd}+";
+
     /**
      * Parses the given {@code String} of arguments in the context of the EditCommand
      * and returns an EditCommand object for execution.
@@ -36,17 +46,10 @@ public class EditCommandParser implements Parser<EditCommand> {
      */
     public EditCommand parse(String args) throws ParseException {
         requireNonNull(args);
-        ArgumentMultimap argMultimap =
-                ArgumentTokenizer.tokenize(args, PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL, PREFIX_STATUS,
-                        PREFIX_MEMBER_TYPE, PREFIX_ROLE, PREFIX_INSTRUMENT, PREFIX_GROUP);
+        ArgumentTokenizer.verifyNoUnknownPrefixes(args, EDIT_PREFIXES);
 
-        Index index;
-
-        try {
-            index = ParserUtil.parseIndex(argMultimap.getPreamble());
-        } catch (ParseException pe) {
-            throw new ParseException(String.format(MESSAGE_INVALID_COMMAND_FORMAT, EditCommand.MESSAGE_USAGE), pe);
-        }
+        ArgumentMultimap argMultimap = ArgumentTokenizer.tokenize(args, EDIT_PREFIXES);
+        Index index = parseIndexForEdit(argMultimap.getPreamble());
 
         argMultimap.verifyNoDuplicatePrefixesFor(PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL, PREFIX_STATUS,
                 PREFIX_MEMBER_TYPE, PREFIX_ROLE);
@@ -82,6 +85,36 @@ public class EditCommandParser implements Parser<EditCommand> {
         }
 
         return new EditCommand(index, editPersonDescriptor);
+    }
+
+    /**
+     * Parses the {@code preamble} of the {@code edit} command into the index of the person to edit.
+     *
+     * @throws ParseException with the generic invalid-format message if {@code preamble} is not an integer at all,
+     *     with {@code MESSAGE_INVALID_PERSON_DISPLAYED_INDEX} if it is a positive integer too large to be an index,
+     *     or with {@code ParserUtil.MESSAGE_INVALID_INDEX} if it is any other integer that is not a positive index.
+     */
+    private Index parseIndexForEdit(String preamble) throws ParseException {
+        String trimmedPreamble = preamble.trim();
+        if (!trimmedPreamble.matches(SIGNED_INTEGER_REGEX)) {
+            throw new ParseException(String.format(MESSAGE_INVALID_COMMAND_FORMAT, EditCommand.MESSAGE_USAGE));
+        }
+        if (isTooLargeForInt(trimmedPreamble) && !trimmedPreamble.startsWith("-")) {
+            throw new ParseException(MESSAGE_INVALID_PERSON_DISPLAYED_INDEX);
+        }
+        return ParserUtil.parseIndex(trimmedPreamble);
+    }
+
+    /**
+     * Returns true if the integer {@code number} does not fit in an {@code int}.
+     */
+    private static boolean isTooLargeForInt(String number) {
+        try {
+            Integer.parseInt(number);
+            return false;
+        } catch (NumberFormatException e) {
+            return true;
+        }
     }
 
     /**

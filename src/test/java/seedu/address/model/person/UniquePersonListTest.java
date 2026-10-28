@@ -125,6 +125,32 @@ public class UniquePersonListTest {
     }
 
     @Test
+    public void remove_identicalDetails_removesOnlySelectedIdentity() {
+        Person anotherAlice = new PersonBuilder(ALICE).withNewId().build();
+        uniquePersonList.add(ALICE);
+        uniquePersonList.add(anotherAlice);
+
+        uniquePersonList.remove(anotherAlice);
+
+        assertEquals(1, uniquePersonList.asUnmodifiableObservableList().size());
+        assertTrue(uniquePersonList.contains(ALICE));
+        assertFalse(uniquePersonList.contains(anotherAlice));
+    }
+
+    @Test
+    public void setPerson_identicalDetails_replacesOnlySelectedIdentity() {
+        Person anotherAlice = new PersonBuilder(ALICE).withNewId().build();
+        Person editedAlice = new PersonBuilder(anotherAlice).withRole("Leader").build();
+        uniquePersonList.add(ALICE);
+        uniquePersonList.add(anotherAlice);
+
+        uniquePersonList.setPerson(anotherAlice, editedAlice);
+
+        assertEquals(ALICE, uniquePersonList.asUnmodifiableObservableList().get(0));
+        assertEquals(editedAlice, uniquePersonList.asUnmodifiableObservableList().get(1));
+    }
+
+    @Test
     public void setPersons_nullUniquePersonList_throwsNullPointerException() {
         assertThrows(NullPointerException.class, () -> uniquePersonList.setPersons((UniquePersonList) null));
     }

@@ -59,6 +59,19 @@ public class CsvExporterTest {
     }
 
     @Test
+    public void export_roleWithFormulaPrefix_addsSpreadsheetTextPrefix() throws Exception {
+        Person person = new PersonBuilder().withRole("=1+1").build();
+        Path outputPath = testFolder.resolve("current-results-01.csv");
+
+        CsvExporter.export(List.of(person), testFolder);
+
+        assertEquals(String.join(System.lineSeparator(),
+                CsvExporter.HEADER,
+                "\"Amy Bee\",\"85355255\",\"amy@gmail.com\",\"member\",\"student\","
+                        + "\" =1+1\",\"\",\"\""), Files.readString(outputPath));
+    }
+
+    @Test
     public void export_emptyList_writesHeaderOnly() throws Exception {
         Path outputPath = testFolder.resolve("current-results-01.csv");
 

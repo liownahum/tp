@@ -39,6 +39,14 @@ class JsonAdaptedInstrument {
     }
 
     /**
+     * Returns whether this entry has valid years and a Unicode-blank name accepted by the previous validation.
+     */
+    public boolean canIgnoreBlankEntry() {
+        return name != null && !name.isBlank() && !name.contains(":") && !Instrument.isValidName(name)
+                && years != null && isWholeNumber(years) && Instrument.isValidYears(years.intValue());
+    }
+
+    /**
      * Converts this Jackson-friendly adapted instrument object into the model's {@code Instrument} object.
      *
      * @throws IllegalValueException if there were any data constraints violated in the adapted instrument.

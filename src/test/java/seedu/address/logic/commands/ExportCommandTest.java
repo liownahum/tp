@@ -72,7 +72,8 @@ public class ExportCommandTest {
         CommandException exception = assertThrows(CommandException.class, () ->
             new ExportCommand(exportDirectory).execute(model));
 
-        assertTrue(exception.getMessage().startsWith("Could not export current results:"));
+        String expectedMessage = String.format(ExportCommand.MESSAGE_EXPORT_FAILURE, exportDirectory);
+        assertEquals(expectedMessage, exception.getMessage());
         assertTrue(exception.getCause() instanceof IOException);
     }
 

@@ -311,6 +311,19 @@ public class LogicManagerTest {
     }
 
     @Test
+    public void execute_undoCaseOnlyInstrumentEdit_restoresCapitalisation() throws Exception {
+        logic.execute(AddCommand.COMMAND_WORD + NAME_DESC_AMY + PHONE_DESC_AMY + EMAIL_DESC_AMY + STATUS_DESC_AMY
+                + " i/Violin:8");
+        logic.execute(EditCommand.COMMAND_WORD + " 1 i/violin:8");
+        assertEquals("violin", model.getFilteredPersonList().get(0).getInstruments().iterator().next().getName());
+
+        CommandResult result = logic.execute(UndoCommand.COMMAND_WORD);
+
+        assertEquals(UndoCommand.MESSAGE_SUCCESS, result.getFeedbackToUser());
+        assertEquals("Violin", model.getFilteredPersonList().get(0).getInstruments().iterator().next().getName());
+    }
+
+    @Test
     public void execute_storageThrowsIoException_throwsCommandException() {
         assertCommandFailureForExceptionFromStorage(DUMMY_IO_EXCEPTION, String.format(
                 LogicManager.FILE_OPS_ERROR_FORMAT, DUMMY_IO_EXCEPTION.getMessage()));

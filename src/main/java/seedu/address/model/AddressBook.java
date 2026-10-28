@@ -85,6 +85,26 @@ public class AddressBook implements ReadOnlyAddressBook {
 
     //// util methods
 
+    /**
+     * Returns true if this address book holds exactly the same data as {@code other}, including the
+     * capitalisation of instrument and group names.
+     * Unlike {@link #equals(Object)}, data that differs only in capitalisation is treated as different.
+     */
+    public boolean hasIdenticalData(ReadOnlyAddressBook other) {
+        requireNonNull(other);
+        List<Person> thisPersons = getPersonList();
+        List<Person> otherPersons = other.getPersonList();
+        if (thisPersons.size() != otherPersons.size()) {
+            return false;
+        }
+        for (int i = 0; i < thisPersons.size(); i++) {
+            if (!thisPersons.get(i).hasIdenticalDetails(otherPersons.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this)

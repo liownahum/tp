@@ -36,7 +36,7 @@ The following provides a quick overview of the main components and their interac
 
 **Main components of the architecture**
 
-**`Main`** (consisting of classes [`Main`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/Main.java) and [`MainApp`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/MainApp.java)) is in charge of the app launch and shut down.
+**`Main`** (consisting of classes [`Main`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/Main.java) and [`MainApp`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/MainApp.java)) is in charge of the app launch and shut down.
 * At app launch, it initializes the other components in the correct sequence, and connects them up with each other.
 * At shut down, it shuts down the other components and invokes cleanup methods where necessary.
 
@@ -68,13 +68,13 @@ The sections below give more details of each component.
 
 ### UI component
 
-The **API** of this component is specified in [`Ui.java`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/ui/Ui.java)
+The **API** of this component is specified in [`Ui.java`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/ui/Ui.java)
 
 ![Structure of the UI Component](images/UiClassDiagram.png)
 
 The UI consists of a `MainWindow` and its parts, such as `CommandBox`, `ResultDisplay`, `PersonListPanel`, and `StatusBarFooter`. All of these, including `MainWindow`, inherit from the abstract `UiPart` class, which captures common behavior among classes that represent visible GUI parts.
 
-The `UI` component uses the JavaFX UI framework. The layouts of these UI parts are defined in matching `.fxml` files in `src/main/resources/view`. For example, [`MainWindow.fxml`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/resources/view/MainWindow.fxml) specifies the layout of [`MainWindow`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/ui/MainWindow.java).
+The `UI` component uses the JavaFX UI framework. The layouts of these UI parts are defined in matching `.fxml` files in `src/main/resources/view`. For example, [`MainWindow.fxml`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/resources/view/MainWindow.fxml) specifies the layout of [`MainWindow`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/ui/MainWindow.java).
 
 The `UI` component,
 
@@ -101,7 +101,7 @@ On Windows PowerShell, set `$env:HIVEMIND_UI_TESTS = "true"` and run `./gradlew.
 
 ### Logic component
 
-**API** : [`Logic.java`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/logic/Logic.java)
+**API** : [`Logic.java`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/logic/Logic.java)
 
 Here's a (partial) class diagram of the `Logic` component:
 
@@ -133,7 +133,7 @@ How the parsing works:
 * Other command parsers follow the same `Parser` interface, although their accepted prefixes and validation rules differ.
 
 ### Model component
-**API** : [`Model.java`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/model/Model.java)
+**API** : [`Model.java`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/model/Model.java)
 
 <img src="images/ModelClassDiagram.png" width="600" />
 
@@ -148,7 +148,7 @@ The `Model` component,
 
 ### Storage component
 
-**API** : [`Storage.java`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/storage/Storage.java)
+**API** : [`Storage.java`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/storage/Storage.java)
 
 <img src="images/StorageClassDiagram.png" width="550" />
 
@@ -156,6 +156,12 @@ The `Storage` component,
 * can save both address book data and user preference data in JSON format, and read them back into corresponding objects.
 * is implemented by `StorageManager`, which delegates the actual JSON file access to `JsonAddressBookStorage` and `JsonUserPrefsStorage` (one class per data file).
 * depends on some classes in the `Model` component (because the `Storage` component's job is to save/retrieve objects that belong to the `Model`)
+
+`JsonAdaptedPerson` rejects null group entries and names for which `String.isBlank()` returns true. For each remaining entry, it skips the membership if `Group.isValidName()` returns false. This omits Unicode-whitespace-only names such as `"\u00A0"` while preserving the person and valid groups. Valid names are constructed as `Group` objects, which replace runs of Unicode whitespace with one ordinary space and trim the result.
+
+`JsonAdaptedPerson` also skips instrument entries whose names are not blank according to `String.isBlank()` but normalize to empty. Remaining instrument names are compared ignoring case and normalized Unicode whitespace. If old entries collapse to the same instrument name, the loader keeps the highest years of experience. These migrations preserve the member's record ID and other fields; loading does not rewrite the file.
+
+This loading rule applies only to saved JSON data. Command parsing rejects every group name that normalizes to empty. Loading does not rewrite the data file, and successfully loaded records remain editable and saveable. The next successful command requiring a save writes the directory without the skipped memberships.
 
 ### Common classes
 
@@ -167,17 +173,41 @@ Classes used by multiple components are in the `seedu.address.commons` package.
 
 This section describes some noteworthy details on how certain features are implemented.
 
+### Adding members and record identity
+
+`AddCommandParser` validates the required name, phone, email and status, defaults an omitted type to `student`, and constructs a `Person`. `Name` accepts Unicode letters, combining accents and numbers, ordinary spaces, apostrophes, hyphens and full stops; the first character must be a letter or number. Prefix separators such as `/` remain invalid in names.
+
+`AddCommand` checks the complete directory for a case-insensitive name match or an exact phone-number match. It adds a warning line for each matching record and still adds the new member, as specified by UC01. `LogicManager` saves the resulting directory before returning the warnings and success message; its existing rollback restores the directory if saving fails.
+
+Each `Person` has a stable UUID record ID, independent of editable contact details. `Person.isSamePerson` compares IDs, while `Person.equals` compares recorded details for snapshot and CSV data comparisons. `UniquePersonList` checks, replaces and removes records by ID. `EditCommand` retains the selected person's ID, so identical names or even identical details never make an edit or deletion target another record. Sorting caches source positions by ID for the same reason.
+
+`JsonAdaptedPerson` saves the ID with the other fields and restores it on load. Older files without IDs receive fresh IDs as they load, which are written on the next successful data change. Malformed or repeated IDs are invalid data. Undo snapshots retain the same IDs because they copy the immutable person records.
+
+**Design choice:** Record IDs allow legitimate shared names and phone numbers without treating editable contact details as permanent identity. They add one internal JSON field but require no new user command or confirmation step. CSV keeps its existing eight columns and receives new record IDs on import. Since CSV has no IDs, `ImportCommand` rejects records with identical recorded details against the existing directory or earlier CSV rows, while allowing shared names with differing details.
+
+### Participation groups
+
+`Group` stores a non-blank name and normalizes whitespace before comparing names ignoring case. `ParserUtil.parseGroups` builds a set, so repeating `g/Choir g/choir` records one group. `add` may omit all groups. `edit` preserves groups unless `g/` is supplied; named groups replace the entire set, and a single empty `g/` clears it. An empty value mixed with named groups is rejected.
+
+For older JSON files, `JsonAdaptedPerson` omits a Unicode-space-only group that earlier versions accepted, preserving the member and its remaining groups. New commands still reject such blank group names; null and previously invalid blank JSON group entries remain invalid data.
+
+`Person` keeps a defensive copy of its group set and exposes an unmodifiable view. JSON saves group names and defaults a missing groups field to an empty set for older files. `PersonCard` renders sorted group names as separate, wrapping labels below a `Groups:` heading. The whole section is hidden and unmanaged when empty. This keeps a group containing a comma distinguishable from multiple groups. Instrument and group badges are constrained to their flow pane's width, and list cells follow the viewport width so long values wrap within the card.
+
 ### Partial-name search
 
 The `find` command matches any part of a person's name, ignoring case. For example, `find ali` matches `Alice Tan`. Multiple whitespace-separated keywords use OR: a person is included when at least one keyword matches. Only the name is searched.
 
 `FindCommandParser` rejects empty arguments and splits valid arguments into keywords. It constructs a `FindCommand` containing a `NameContainsKeywordsPredicate`. When executed, the command passes the predicate to `ModelManager.updateFilteredPersonList`, which updates the predicate of the JavaFX `FilteredList`. The UI observes the wrapping `SortedList` and displays the matching persons in the selected order with indices starting at 1; the underlying address book remains unchanged.
 
-The following sequence diagram traces a successful `find ali` command. The participant `m:Model` is implemented by `ModelManager`. Setting the predicate evaluates the full directory, replacing any previous search or filter. The command uses the resulting list size for its feedback message and does not require a save.
+The following two sequence diagrams trace a successful `find ali` command. Parsing and execution are shown separately so the labels remain readable at the guide's width.
 
-![Sequence diagram for find ali, showing keyword parsing, predicate creation, filtering, and the result count](images/FindSequenceDiagram.png)
+First, `LogicManager` calls `AddressBookParser.parseCommand`, which returns the parsed command `f` after creating its predicate `p`.
 
-[Open the sequence diagram at full size](images/FindSequenceDiagram.png). The diagram focuses on parsing and execution; UI list-change notifications are omitted.
+![Find command parsing: keyword parsing, predicate creation, and command creation](images/FindParsingSequenceDiagram.png)
+
+Execution then continues in `LogicManager`. The participant `m:Model` is implemented by `ModelManager`, and `p:Predicate` is the `NameContainsKeywordsPredicate` created during parsing. Setting the predicate evaluates the full directory, replacing any previous search or filter. The command uses the resulting list size for its feedback message and does not require a save. UI list-change notifications are omitted.
+
+![Find command execution: predicate evaluation, result count, and feedback](images/FindSequenceDiagram.png)
 
 `NameContainsKeywordsPredicate` uses `StringUtil.containsSubstringIgnoreCase` for each keyword. The helper trims the keyword, rejects null, empty or multiple-word inputs, and normalises both strings with `Locale.ROOT` before checking for a substring. The original `containsWordIgnoreCase` helper retains its whole-word behaviour for other callers.
 
@@ -187,7 +217,7 @@ Tests in `StringUtilTest` cover substring positions, case differences, invalid i
 
 `SortCommandParser` accepts exactly one attribute, `name` or `status`, ignoring case and surrounding whitespace. `SortCommandParser` maps each keyword to a `SortKey` enum value holding its comparator. `SortCommand` passes that comparator to `Model.updateSortedPersonList`. Name sorting compares full names using `String.CASE_INSENSITIVE_ORDER`. Status sorting uses explicit ranks: `MEMBER`, `ACTIVE_ALUMNUS`, then `INACTIVE_ALUMNUS`, independently of enum declaration order.
 
-`ModelManager` wraps its `FilteredList<Person>` in a `SortedList<Person>`. `getFilteredPersonList` exposes this sorted view to the UI and index-based commands, keeping displayed indices consistent with edit and delete. The model breaks comparator ties using cached directory positions, so switching from name sorting still restores directory order within each status. A source-list listener refreshes the cache before the filtered and sorted views process each directory change; comparisons use constant-time lookups without retaining the model in the comparator. Stored records are not reordered, and `SortCommand.requiresSave` returns false.
+`ModelManager` wraps its `FilteredList<Person>` in a `SortedList<Person>`. `getFilteredPersonList` exposes this sorted view to the UI and index-based commands, keeping displayed indices consistent with edit and delete. The model breaks comparator ties using cached directory positions keyed by record ID, so switching from name sorting still restores directory order within each status, including members with identical details. A source-list listener refreshes the cache before the filtered and sorted views process each directory change; comparisons use constant-time lookups. Stored records are not reordered, and `SortCommand.requiresSave` returns false.
 
 Find/filter update the predicate without clearing the comparator. Add/edit retain sorting while restoring the full directory. `ListCommand` resets the predicate and clears the comparator to restore insertion order. A new model starts without a comparator, so sorting is session-only.
 
@@ -195,7 +225,9 @@ Sorting tests cover case-insensitive names, membership order, ties, switching or
 
 ### Status, instrument, type, role, and group filtering
 
-`FilterCommandParser` accepts repeated `s/STATUS`, `i/NAME[:MIN_YEARS]`, `ty/TYPE`, `r/ROLE`, and `g/GROUP` arguments and requires at least one criterion. It validates statuses, member types, and roles through `ParserUtil.parseStatus`, `parseMemberType`, and `parseRole`. Groups use `ParserUtil.parseGroups`, reusing the same validation and deduplication as `add` and `edit`. Its `parseInstrumentCriterion` helper validates names through `ParserUtil.parseInstrumentName` and optional whole minimum years from 0 to 99. Name-only criteria default to a minimum of zero. Invalid minimum years use `InstrumentCriterion.MESSAGE_MINIMUM_YEARS_CONSTRAINTS`. Unsupported contact-field prefixes are tokenized and rejected rather than absorbed into criterion values.
+`FilterCommandParser` accepts repeated `s/STATUS`, `i/NAME[:MIN_YEARS]`, `ty/TYPE`, `r/ROLE`, and `g/GROUP` arguments and requires at least one criterion. It validates statuses, member types, and roles through `ParserUtil.parseStatus`, `parseMemberType`, and `parseRole`. Groups use `ParserUtil.parseGroups`, reusing the same validation and deduplication as `add` and `edit`. Its `parseInstrumentCriterion` helper validates names through `ParserUtil.parseInstrumentName` and optional whole minimum years from 0 to 99. Name-only criteria default to a minimum of zero. Invalid minimum years use `InstrumentCriterion.MESSAGE_MINIMUM_YEARS_CONSTRAINTS`.
+
+Before tokenizing, the parser reuses `ArgumentTokenizer.verifyNoUnknownPrefixes` with its five accepted prefixes. This replaces the separate unsupported-prefix check: `n/`, `p/`, and `e/` receive specific errors, while removed and wrong-case prefixes are rejected only before the first accepted prefix, matching `edit`. Ambiguous slash text inside values remains literal to preserve valid free text; field validation then applies as usual.
 
 `FilterCommand` stores immutable sets of statuses, `InstrumentCriterion` values, member types, roles, and groups. Each instrument criterion has a normalized `name` and an explicit `minimumYears`. Its `matches(Instrument)` method checks the whole name through `Instrument.hasName` and an inclusive experience threshold on the same recorded instrument. `Instrument` continues to represent actual years played in member records and storage. `PersonMatchesFilterPredicate` checks the selected statuses and member types and delegates instrument matching to each criterion. Roles match complete names, ignoring case and surrounding whitespace, without changing `Role.equals`. A missing role fails an explicit role criterion. Groups match any recorded participation group using `Group.equals`, which ignores case and extra whitespace while matching the whole name. People without groups fail an explicit group criterion. Criteria within a field use OR, including repeated names with different minimums, and different fields use AND. An omitted field imposes no restriction, so status-only filters also include matching people without instruments, roles, or groups.
 
@@ -203,9 +235,9 @@ The command replaces the predicate on the full directory's `FilteredList`, repor
 
 ### Exporting current results
 
-`AddressBookParser` recognises `export` and creates an `ExportCommand` directly because the command takes no arguments. When executed, `ExportCommand` obtains the current displayed results through `Model#getFilteredPersonList()` and passes them to `CsvExporter` with the `exports` directory. Exporting does not modify the model, so it does not save the address book or create an undo state.
+`AddressBookParser` delegates `export` to `ExportCommandParser`, which rejects arguments because the command takes none. When executed, `ExportCommand` obtains the current displayed results through `Model#getFilteredPersonList()` and passes them to `CsvExporter` with the `exports` directory. Exporting does not modify the model, so it does not save the address book or create an undo state.
 
-`CsvExporter` creates CSV content with columns for name, phone, email, status, member type, role, instruments, and groups. Each field is quoted, with embedded quotation marks escaped. It sorts a person's instruments and groups by name and joins them with semicolons. `CsvListCodec` escapes semicolons and backslashes within each list value; `CsvImporter` decodes them before constructing instruments and groups, so valid names survive an export/import round trip. Empty results produce a file containing only the CSV header.
+`CsvExporter` creates CSV content with columns for name, phone, email, status, member type, role, instruments, and groups. Each field is quoted, with embedded quotation marks escaped. `CsvCellCodec` prefixes values that spreadsheet applications could interpret as formulas with a space. `CsvImporter` removes this prefix to preserve export/import round trips. `CsvExporter` sorts a person's instruments and groups by name and joins them with semicolons. `CsvListCodec` escapes semicolons and backslashes within each list value; `CsvImporter` decodes them before constructing instruments and groups. Empty results produce a file containing only the CSV header.
 
 Before writing, `CsvExporter` finds the first unused filename in the form `current-results-XX.csv`, beginning with `current-results-01.csv`; existing exports are therefore preserved rather than overwritten. If file creation or writing fails, `ExportCommand` converts the `IOException` into a `CommandException`. Parser and exporter tests cover recognition of the command, normal and empty exports, and selecting the first available numbered filename while preserving existing files.
 
@@ -221,9 +253,9 @@ The following sequence diagram traces `filter s/member i/Violin:3 ty/teacher r/C
 
 `AddressBookParser` routes `import FILE_NAME` to `ImportCommandParser`. The parser accepts a non-empty `.csv` file name without path separators, so `ImportCommand` always resolves it inside the `imports` directory.
 
-`ImportCommand` asks `CsvImporter` to read the entire CSV before changing the model. `CsvImporter` validates the required header and eight-column layout, then constructs `Person` objects using the existing model value objects such as `Name`, `Phone`, `Email`, `Status`, and `MemberType`. This reuses the application's validation rules instead of duplicating them in the CSV layer. It returns the complete imported list only when every row is valid.
+`ImportCommand` asks `CsvImporter.importPeopleWithLineNumbers` to read the entire CSV before changing the model. `CsvImporter` validates the required header and eight-column layout, then constructs `Person` objects using the existing model value objects such as `Name`, `Phone`, `Email`, `Status`, and `MemberType`. This reuses the application's validation rules instead of duplicating them in the CSV layer. It returns the complete imported list with each record's starting physical line number only when every row is valid, including records spanning multiple lines.
 
-After parsing succeeds, `ImportCommand` copies the current address book and adds every imported person to the copy. This detects duplicates against both existing records and earlier CSV rows without mutating the model. Only when all additions succeed does it replace the model's address book with the copy. Consequently, invalid CSV data and duplicate people fail the import atomically: the current directory remains unchanged.
+After parsing succeeds, `ImportCommand` copies the current address book and checks every imported person's recorded details against the copy before adding it. This detects identical records against both existing members and earlier CSV rows without mutating the model, while allowing different records to share names or phone numbers. Duplicate feedback identifies the person's name and starting physical line number. Only when all additions succeed does it replace the model's address book with the copy and show the full directory. Consequently, invalid CSV data and identical records fail the import atomically: the current directory and active filter remain unchanged.
 
 The following sequence diagram focuses on a successful `ImportCommand.execute(...)` call. Command parsing, field-level CSV parsing, error handling, and `LogicManager`'s generic save-and-rollback handling are omitted; they do not affect the command's validate-then-replace behavior.
 
@@ -323,7 +355,7 @@ The following activity diagram summarizes what happens when a user executes a ne
 
 * **Alternative 1 (current choice):** `LogicManager` commits after a successful save.
   * Pros: Failed saves never enter the history; new data-changing commands are undoable without extra code.
-  * Cons: Relies on `commit()` comparing states to skip unchanged data, and on `undo` and `redo` opting out through `Command#recordsChange()`.
+  * Cons: Relies on `commit()` comparing states to skip unchanged data. The comparison uses `AddressBook#hasIdenticalData`, not `equals`, because `Instrument` and `Group` equality ignores case, which would hide a capitalisation-only edit. It also relies on `undo` and `redo` opting out through `Command#recordsChange()`.
 
 * **Alternative 2:** Each data-changing command calls `Model#commitAddressBook()` (the original AB3 proposal).
   * Pros: Explicit.
@@ -599,6 +631,42 @@ testers are expected to do more *exploratory* testing.
 
 1. _{ more test cases …​ }_
 
+### Adding members and checking possible duplicates
+
+Use Java 25 and the released JAR in a disposable writable folder. Run `clear` before this scenario.
+
+1. Run `add n/Alex Same p/91234567 e/one@example.com s/member`.<br>
+   Expected: One student member is added, with no role, instruments or groups.
+1. Run `add n/Alex Same p/92345678 e/two@example.com s/member`.<br>
+   Expected: A warning identifies the first Alex as a possible duplicate, and the second Alex is still added.
+1. Run `add n/Different Name p/91234567 e/three@example.com s/member`.<br>
+   Expected: A phone-match warning appears and the member is added. There are three records.
+1. Run `add n/Zoé Tan p/93456789 e/zoe@example.com s/member`, `add n/张伟 p/94567890 e/zhang@example.com s/member`, `add n/Anne-Marie p/95678901 e/anne@example.com s/member` and `add n/O'Neil Tan p/96789012 e/oneil@example.com s/member`.<br>
+   Expected: All four names are accepted exactly as entered and remain correct after restarting.
+1. Run `add n/Invalid/Name p/97890123 e/invalid@example.com s/member`, then an `add` command missing `s/`, then one containing both `s/member s/active-alumnus`.<br>
+   Expected: Each command fails with the relevant validation, usage or duplicate-prefix message. The directory is unchanged.
+1. Run `sort name`, `find Alex`, then `edit 2 r/Second Alex`.<br>
+   Expected: Only the second Alex receives the role. Run `find Alex` again because editing shows the full directory.
+1. Run `delete 2`, then `undo`.<br>
+   Expected: The Alex with role `Second Alex` is removed and restored, while the first Alex remains unchanged. Restart and repeat `find Alex` to verify both saved records remain independent.
+
+### Adding, replacing and clearing participation groups
+
+Start another disposable scenario with `clear`.
+
+1. Run `add n/Alicia Tan p/90000001 e/alicia@example.com s/member g/Dance, Music` and `add n/Ben Lee p/90000002 e/ben@example.com s/member g/Dance g/Music`.<br>
+   Expected: Alicia has one badge containing `Dance, Music`; Ben has separate `Dance` and `Music` badges.
+1. Run `edit 1 g/Chamber Orchestra g/Training g/training`.<br>
+   Expected: Alicia's original group is replaced with two alphabetically ordered badges. The repeated `Training` name is stored once.
+1. Run `edit 2 r/Leader`.<br>
+   Expected: Ben's groups remain unchanged when another field is edited.
+1. Run `edit 1 g/ g/Choir` and `add n/Blank Group p/90000003 e/blank@example.com s/member g/`.<br>
+   Expected: Both are rejected; existing records and groups are unchanged.
+1. Run `edit 1 g/`.<br>
+   Expected: Alicia's groups are removed and no empty heading or row remains. Ben's groups remain visible.
+1. Restart the application.<br>
+   Expected: Alicia still has no groups and Ben retains both groups. Resize the window and check that the badges wrap without overlap.
+
 ### Viewing member cards
 
 Use a disposable directory for these checks so the test records do not affect your real data.
@@ -613,6 +681,8 @@ Use a disposable directory for these checks so the test records do not affect yo
    Expected: Each result shows the appropriate members with complete card details and indices starting at `1`; the no-match search shows no cards; `list` restores all members in insertion order.
 1. Add a member with a long name, email and role, and several instruments. Resize the window narrower and scroll through the list.<br>
    Expected: Text wraps without overlapping other fields, instrument labels flow onto additional rows, and all recorded details remain accessible. Check both full and empty optional fields again after scrolling.
+1. Run `add n/Card Width p/91234567 e/music.coordinator.long.contact.address@example.com s/member r/Student Coordinator for the University Chamber Orchestra i/Historical Keyboard and String Instrument Ensemble Performance Specialisation:12 g/University Chamber Orchestra Alumni and Student Combined Performance Group`. Resize the window to its minimum 450 × 600, then widen and narrow it again.<br>
+   Expected: The full instrument name and `12 yrs` remain readable on wrapped lines, as does the group name. Neither badge pushes contact details or other card content beyond the visible right edge. Scroll vertically if the card is taller than the available area.
 
 ### Sorting displayed members
 

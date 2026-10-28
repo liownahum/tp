@@ -6,6 +6,9 @@ import static seedu.address.testutil.Assert.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
+/**
+ * Verifies name validation, including international names and common name punctuation.
+ */
 public class NameTest {
 
     @Test
@@ -36,6 +39,21 @@ public class NameTest {
         assertTrue(Name.isValidName("peter the 2nd")); // alphanumeric characters
         assertTrue(Name.isValidName("Capital Tan")); // with capital letters
         assertTrue(Name.isValidName("David Roger Jackson Ray Jr 2nd")); // long names
+    }
+
+    @Test
+    public void isValidName_internationalAndPunctuatedNames_accepts() {
+        for (String name : new String[] {"Zo\u00e9 Tan", "\u5f20\u4f1f", "Anne-Marie", "O'Neil Tan",
+            "D\u2019Souza", "Zoe\u0301 Tan", "A. Rahman"}) {
+            assertTrue(Name.isValidName(name), name);
+        }
+    }
+
+    @Test
+    public void isValidName_blankOrCommandCharacters_rejects() {
+        for (String name : new String[] {"   ", "-", "'", "\u0301", " Alex", "Alex n/Other", "Alex\nTan"}) {
+            assertFalse(Name.isValidName(name), name);
+        }
     }
 
     @Test

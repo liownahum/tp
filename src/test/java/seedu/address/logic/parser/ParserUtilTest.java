@@ -168,6 +168,8 @@ public class ParserUtilTest {
             -> ParserUtil.parseInstrument(":3"));
         assertThrows(ParseException.class, Instrument.MESSAGE_NAME_CONSTRAINTS, ()
             -> ParserUtil.parseInstrument("   :3"));
+        assertThrows(ParseException.class, Instrument.MESSAGE_NAME_CONSTRAINTS, ()
+            -> ParserUtil.parseInstrument("\u00a0\u2002:3"));
     }
 
     @Test
@@ -198,6 +200,13 @@ public class ParserUtilTest {
     }
 
     @Test
+    public void parseInstrument_unicodeWhitespaceInName_normalizesName() throws Exception {
+        Instrument parsedInstrument = ParserUtil.parseInstrument("\u00a0French\u2002Horn\u202f:3");
+        assertEquals(new Instrument("French Horn", 3), parsedInstrument);
+        assertEquals("French Horn", parsedInstrument.getName());
+    }
+
+    @Test
     public void parseInstruments_null_throwsNullPointerException() {
         assertThrows(NullPointerException.class, () -> ParserUtil.parseInstruments(null));
     }
@@ -214,6 +223,8 @@ public class ParserUtilTest {
             -> ParserUtil.parseInstruments(List.of("Violin:5", "violin:2")));
         assertThrows(ParseException.class, Instrument.MESSAGE_DUPLICATE_NAMES, ()
             -> ParserUtil.parseInstruments(List.of("Violin:5", "VIOLIN:5")));
+        assertThrows(ParseException.class, Instrument.MESSAGE_DUPLICATE_NAMES, ()
+            -> ParserUtil.parseInstruments(List.of("French Horn:3", "\u00a0french\u2002horn\u202f:5")));
     }
 
     @Test

@@ -32,7 +32,6 @@ ArgumentTokenizer .left.> ArgumentMultimap
 AddCommandParser ..> CliSyntax
 CliSyntax ..> Prefix
 AddCommandParser ..> ParserUtil
-ParserUtil .down.> Prefix
 ArgumentTokenizer .down.> Prefix
 AddCommand -up-|> Command
 @enduml

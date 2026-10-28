@@ -67,7 +67,7 @@ public class AddressBookParser {
             case ImportCommand.COMMAND_WORD -> new ImportCommandParser().parse(arguments);
             case ListCommand.COMMAND_WORD -> new ListCommand();
             case ExitCommand.COMMAND_WORD -> new ExitCommand();
-            case ExportCommand.COMMAND_WORD -> new ExportCommand();
+            case ExportCommand.COMMAND_WORD -> new ExportCommandParser().parse(arguments);
             case HelpCommand.COMMAND_WORD -> new HelpCommand();
             case SortCommand.COMMAND_WORD -> new SortCommandParser().parse(arguments);
             case UndoCommand.COMMAND_WORD -> new UndoCommandParser().parse(arguments);

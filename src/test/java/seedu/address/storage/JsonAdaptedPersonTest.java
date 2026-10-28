@@ -43,6 +43,22 @@ public class JsonAdaptedPersonTest {
             .collect(Collectors.toList());
 
     @Test
+    public void jsonRoundTrip_preservesRecordIdentity() throws Exception {
+        String json = JsonUtil.toJsonString(new JsonAdaptedPerson(BENSON));
+        Person restored = JsonUtil.fromJsonString(json, JsonAdaptedPerson.class).toModelType();
+        assertTrue(BENSON.isSamePerson(restored));
+    }
+
+    @Test
+    public void toModelType_invalidRecordId_throwsIllegalValueException() {
+        for (String id : List.of("not-an-id", "1-1-1-1-1", "")) {
+            JsonAdaptedPerson person = new JsonAdaptedPerson(id, VALID_NAME, VALID_PHONE, VALID_EMAIL,
+                    VALID_STATUS, VALID_MEMBER_TYPE, null, VALID_INSTRUMENTS, List.of());
+            assertThrows(IllegalValueException.class, JsonAdaptedPerson.INVALID_ID_MESSAGE, person::toModelType);
+        }
+    }
+
+    @Test
     public void toModelType_validPersonDetails_returnsPerson() throws Exception {
         JsonAdaptedPerson person = new JsonAdaptedPerson(BENSON);
         assertEquals(BENSON, person.toModelType());
@@ -103,23 +119,74 @@ public class JsonAdaptedPersonTest {
     }
 
     @Test
-    public void toModelType_duplicateInstrumentNames_throwsIllegalValueException() {
+    public void toModelType_unicodeBlankInstrument_preservesPersonAndOtherInstruments() throws Exception {
+        for (String blank : List.of("\u00a0", "\u2007", "\u202f", "\u0085", " \u2002\u00a0\t")) {
+            List<JsonAdaptedInstrument> instruments = List.of(
+                    new JsonAdaptedInstrument(blank, 3), new JsonAdaptedInstrument("Cello", 5));
+            JsonAdaptedPerson person = adaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL, instruments);
+            assertEquals(new PersonBuilder(BENSON).withoutRole().withInstruments("Cello:5").build(),
+                    person.toModelType());
+        }
+    }
+
+    @Test
+    public void toModelType_onlyUnicodeBlankInstrument_preservesPersonWithoutInstruments() throws Exception {
+        JsonAdaptedPerson person = adaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL,
+                List.of(new JsonAdaptedInstrument("\u00a0", 3)));
+        assertEquals(new PersonBuilder(BENSON).withoutRole().withInstruments().build(), person.toModelType());
+    }
+
+    @Test
+    public void toModelType_invalidBlankInstrument_throwsIllegalValueException() {
+        for (String blank : List.of("", " ", "\t", "\u2002", ":")) {
+            JsonAdaptedPerson person = adaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL,
+                    List.of(new JsonAdaptedInstrument(blank, 3)));
+            assertThrows(IllegalValueException.class, Instrument.MESSAGE_NAME_CONSTRAINTS, person::toModelType);
+        }
+        for (Number years : new Number[] {null, -1, 100, 3.5, 4294967299L}) {
+            JsonAdaptedPerson person = adaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL,
+                    List.of(new JsonAdaptedInstrument("\u00a0", years)));
+            assertThrows(IllegalValueException.class, person::toModelType);
+        }
+    }
+
+    @Test
+    public void toModelType_unicodeDuplicateNames_keepsMaximumYearsInEitherOrder() throws Exception {
+        for (String whitespace : List.of("\u00a0", "\u2002", "\u202f", "\u0085")) {
+            JsonAdaptedInstrument lower = new JsonAdaptedInstrument("Bass Guitar", 3);
+            JsonAdaptedInstrument higher = new JsonAdaptedInstrument("BASS" + whitespace + "GUITAR", 5);
+            for (List<JsonAdaptedInstrument> instruments : List.of(List.of(lower, higher), List.of(higher, lower))) {
+                JsonAdaptedPerson person = adaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL, instruments);
+                assertEquals(Set.of(new Instrument("Bass Guitar", 5)), person.toModelType().getInstruments());
+            }
+        }
+    }
+
+    @Test
+    public void toModelType_duplicateInstrumentNames_keepsMaximumYears() throws Exception {
         List<JsonAdaptedInstrument> duplicateInstruments = List.of(
                 new JsonAdaptedInstrument("Violin", 4), new JsonAdaptedInstrument("violin", 2));
         JsonAdaptedPerson person =
                 adaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL, duplicateInstruments);
-        assertThrows(IllegalValueException.class, Instrument.MESSAGE_DUPLICATE_NAMES, person::toModelType);
+        assertEquals(Set.of(new Instrument("Violin", 4)), person.toModelType().getInstruments());
     }
 
     @Test
-    public void toModelType_repeatedIdenticalInstrument_throwsIllegalValueException() {
+    public void toModelType_asciiWhitespaceDuplicateNames_keepsMaximumYears() throws Exception {
+        JsonAdaptedPerson person = adaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL, List.of(
+                new JsonAdaptedInstrument("Bass Guitar", 3), new JsonAdaptedInstrument(" BASS \t GUITAR ", 5)));
+        assertEquals(Set.of(new Instrument("Bass Guitar", 5)), person.toModelType().getInstruments());
+    }
+
+    @Test
+    public void toModelType_repeatedIdenticalInstrument_keepsOneEntry() throws Exception {
         // same name and years, in the same or a different case, is still a repeated instrument
         for (String repeatedName : List.of("Violin", "violin")) {
             List<JsonAdaptedInstrument> repeatedInstruments = List.of(
                     new JsonAdaptedInstrument("Violin", 4), new JsonAdaptedInstrument(repeatedName, 4));
             JsonAdaptedPerson person =
                     adaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL, repeatedInstruments);
-            assertThrows(IllegalValueException.class, Instrument.MESSAGE_DUPLICATE_NAMES, person::toModelType);
+            assertEquals(Set.of(new Instrument("Violin", 4)), person.toModelType().getInstruments());
         }
     }
 
@@ -149,9 +216,42 @@ public class JsonAdaptedPersonTest {
 
     @Test
     public void toModelType_blankGroup_throwsIllegalValueException() {
+        for (String blank : List.of("", " ", "\t", "\u2002")) {
+            JsonAdaptedPerson person = new JsonAdaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL,
+                    VALID_STATUS, VALID_MEMBER_TYPE, null, VALID_INSTRUMENTS, List.of(blank));
+            assertThrows(IllegalValueException.class, Group.MESSAGE_CONSTRAINTS, person::toModelType);
+        }
+    }
+
+    @Test
+    public void toModelType_legacyBlankGroups_preservesPersonAndValidGroups() throws Exception {
+        for (String blank : List.of("\u00a0", "\u2007", "\u202f", "\u0085", " \u2002\u00a0\t")) {
+            JsonAdaptedPerson person = new JsonAdaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL,
+                    VALID_STATUS, VALID_MEMBER_TYPE, null, VALID_INSTRUMENTS,
+                    List.of(blank, "Chamber\u00a0Orchestra", "Training"));
+            Person expected = new PersonBuilder(BENSON).withoutRole()
+                    .withGroups("Chamber Orchestra", "Training").build();
+            assertEquals(expected, person.toModelType());
+        }
+    }
+
+    @Test
+    public void toModelType_onlyLegacyBlankGroups_preservesPersonWithoutGroups() throws Exception {
         JsonAdaptedPerson person = new JsonAdaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL,
-                VALID_STATUS, VALID_MEMBER_TYPE, null, VALID_INSTRUMENTS, List.of(" "));
-        assertThrows(IllegalValueException.class, Group.MESSAGE_CONSTRAINTS, person::toModelType);
+                VALID_STATUS, VALID_MEMBER_TYPE, null, VALID_INSTRUMENTS, List.of("\u00a0", "\u202f"));
+        assertEquals(new PersonBuilder(BENSON).withoutRole().withGroups().build(), person.toModelType());
+    }
+
+    @Test
+    public void jsonRoundTrip_legacyUnicodeBlankGroup_keepsMemberAndOtherGroups() throws Exception {
+        Person expected = new PersonBuilder(BENSON).withGroups("Orchestra").build();
+        for (String whitespace : List.of("\u00a0", "\u0085", "\u2007\u202f")) {
+            String json = JsonUtil.toJsonString(new JsonAdaptedPerson(expected))
+                    .replace("\"Orchestra\"", "\"" + whitespace + "\", \"Orchestra\"");
+            Person restored = JsonUtil.fromJsonString(json, JsonAdaptedPerson.class).toModelType();
+            assertEquals(expected, restored);
+            assertTrue(expected.isSamePerson(restored));
+        }
     }
 
     @Test

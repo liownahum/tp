@@ -21,6 +21,8 @@ public class Messages {
     public static final String MESSAGE_PERSONS_LISTED_OVERVIEW = "%1$d person(s) listed!";
     public static final String MESSAGE_DUPLICATE_FIELDS =
                 "Multiple values specified for the following single-valued field(s): ";
+    public static final String MESSAGE_UNKNOWN_PREFIX =
+            "Unknown prefix %1$s. Prefixes are lowercase, and this command accepts only: %2$s";
 
     /**
      * Returns an error message indicating the duplicate prefixes.

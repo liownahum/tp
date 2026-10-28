@@ -30,6 +30,8 @@ public class Instrument {
     public static final String MESSAGE_DUPLICATE_NAMES =
             "Each instrument should only be listed once per person";
 
+    private static final String YEARS_SEPARATOR = ":";
+
     private final String name;
     private final int years;
 
@@ -53,7 +55,7 @@ public class Instrument {
      */
     public static boolean isValidName(String test) {
         requireNonNull(test);
-        return !test.isBlank() && !test.contains(":");
+        return !normalizeName(test).isEmpty() && !test.contains(":");
     }
 
     /**
@@ -61,6 +63,42 @@ public class Instrument {
      */
     public static boolean isValidYears(int test) {
         return test >= 0 && test <= MAX_YEARS;
+    }
+
+    /**
+     * Parses an instrument in {@code NAME:YEARS} form.
+     * Whitespace around the name and years is ignored.
+     *
+     * @throws IllegalArgumentException if the value is not in the expected form,
+     *     or its name or years are invalid.
+     */
+    public static Instrument fromString(String value) {
+        requireNonNull(value);
+        int separatorIndex = value.indexOf(YEARS_SEPARATOR);
+        if (separatorIndex == -1) {
+            throw new IllegalArgumentException(MESSAGE_FORMAT_CONSTRAINTS);
+        }
+
+        String name = value.substring(0, separatorIndex).trim();
+        if (!isValidName(name)) {
+            throw new IllegalArgumentException(MESSAGE_NAME_CONSTRAINTS);
+        }
+
+        String yearsValue = value.substring(separatorIndex + 1).trim();
+        if (!yearsValue.matches("\\d+")) {
+            throw new IllegalArgumentException(MESSAGE_YEARS_CONSTRAINTS);
+        }
+
+        int years;
+        try {
+            years = Integer.parseInt(yearsValue);
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException(MESSAGE_YEARS_CONSTRAINTS, exception);
+        }
+        if (!isValidYears(years)) {
+            throw new IllegalArgumentException(MESSAGE_YEARS_CONSTRAINTS);
+        }
+        return new Instrument(name, years);
     }
 
     public String getName() {
@@ -93,8 +131,8 @@ public class Instrument {
         return false;
     }
 
-    private static String normalizeName(String name) {
-        return name.trim().replaceAll("\\s+", " ");
+    static String normalizeName(String name) {
+        return name.replaceAll("(?U)\\s+", " ").trim();
     }
 
     private static String toKey(String normalizedName) {
@@ -118,6 +156,18 @@ public class Instrument {
     @Override
     public int hashCode() {
         return Objects.hash(toKey(name), years);
+    }
+
+    /**
+     * Returns true if this instrument has exactly the same stored name (case-sensitive) and the same
+     * number of years as {@code other}. Returns false for {@code null}.
+     * Unlike {@link #equals(Object)}, a difference in capitalisation counts as a difference here.
+     */
+    public boolean isIdenticalTo(Instrument other) {
+        if (other == null) {
+            return false;
+        }
+        return name.equals(other.name) && years == other.years;
     }
 
     /**

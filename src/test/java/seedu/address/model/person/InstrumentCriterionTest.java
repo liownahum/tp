@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.testutil.Assert.assertThrows;
 
+import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,7 @@ public class InstrumentCriterionTest {
     @Test
     public void constructor_invalidName_throwsException() {
         assertThrows(NullPointerException.class, () -> new InstrumentCriterion(null, 3));
-        for (String name : new String[] {"", " \t ", "Violin:3"}) {
+        for (String name : new String[] {"", " \t ", "\u00a0", "\u2002\u202f", "Violin:3"}) {
             assertThrows(IllegalArgumentException.class,
                     Instrument.MESSAGE_NAME_CONSTRAINTS, () -> new InstrumentCriterion(name, 3));
         }
@@ -34,6 +35,24 @@ public class InstrumentCriterionTest {
         InstrumentCriterion criterion = new InstrumentCriterion("  French   Horn  ", 3);
         assertEquals("French Horn", criterion.getName());
         assertEquals(3, criterion.getMinimumYears());
+    }
+
+    @Test
+    public void constructor_unicodeWhitespace_normalizesNameAndMatchesEquivalentInstruments() {
+        InstrumentCriterion expected = new InstrumentCriterion("French Horn", 3);
+        for (String whitespace : List.of("\u00a0", "\u2002", "\u2003", "\u2009", "\u202f", "\u3000")) {
+            InstrumentCriterion criterion = new InstrumentCriterion(
+                    whitespace + "French" + whitespace + "Horn" + whitespace, 3);
+            assertEquals("French Horn", criterion.getName());
+            assertEquals(3, criterion.getMinimumYears());
+            assertEquals(expected, criterion);
+            assertEquals(expected.hashCode(), criterion.hashCode());
+            assertTrue(Set.of(expected).contains(criterion));
+            assertTrue(criterion.matches(new Instrument("French Horn", 3)));
+            assertTrue(expected.matches(new Instrument("French" + whitespace + "Horn", 4)));
+            assertFalse(criterion.matches(new Instrument("French Horn", 2)));
+            assertFalse(criterion.matches(new Instrument("Horn", 3)));
+        }
     }
 
     @Test
