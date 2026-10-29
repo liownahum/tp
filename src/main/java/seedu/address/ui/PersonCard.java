@@ -68,8 +68,8 @@ public class PersonCard extends UiPart<Region> {
         name.setText(person.getName().fullName);
         phone.setText(person.getPhone().value);
         email.setText(person.getEmail().value);
-        membershipStatus.setText(person.getStatus().toString());
-        memberType.setText(person.getMemberType().toString());
+        membershipStatus.setText(toDisplayText(person.getStatus().toString()));
+        memberType.setText(toDisplayText(person.getMemberType().toString()));
 
         boolean hasRole = person.getRole().isPresent();
         role.setText(person.getRole()
@@ -95,12 +95,22 @@ public class PersonCard extends UiPart<Region> {
     }
 
     /**
+     * Returns a readable label for a validated membership keyword without changing its stored value.
+     */
+    private static String toDisplayText(String keyword) {
+        String words = keyword.replace('-', ' ');
+        return Character.toUpperCase(words.charAt(0)) + words.substring(1);
+    }
+
+    /**
      * Keeps each badge within its flow pane, including long words, as the window is resized.
      */
     private static void addWrappingLabel(FlowPane pane, String text) {
         Label label = new Label(text);
         label.setWrapText(true);
         label.setMinWidth(0);
+        // Font metrics differ between platforms; do not squeeze wrapped lines below their preferred height.
+        label.setMinHeight(Region.USE_PREF_SIZE);
         label.maxWidthProperty().bind(pane.widthProperty());
         pane.getChildren().add(label);
     }

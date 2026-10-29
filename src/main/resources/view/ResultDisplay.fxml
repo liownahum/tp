@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextArea?>
-<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 
-<StackPane fx:id="placeHolder" styleClass="pane-with-border" xmlns="http://javafx.com/javafx/17"
-    xmlns:fx="http://javafx.com/fxml/1">
-  <TextArea fx:id="resultDisplay" editable="false" styleClass="result-display"/>
-</StackPane>
+<VBox fx:id="placeHolder" styleClass="pane-with-border, feedback-information" spacing="3"
+      xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+  <Label fx:id="feedbackType" text="Information" styleClass="feedback-type" />
+  <TextArea fx:id="resultDisplay" editable="false" wrapText="true" minHeight="0"
+            styleClass="result-display" VBox.vgrow="ALWAYS" />
+</VBox>

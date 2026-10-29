@@ -60,8 +60,8 @@ public class PersonCardTest {
             assertEquals("Alicia Tan", label(card, "name").getText());
             assertEquals("90000002", label(card, "phone").getText());
             assertEquals("alicia@example.com", label(card, "email").getText());
-            assertEquals("active-alumnus", label(card, "membershipStatus").getText());
-            assertEquals("teacher", label(card, "memberType").getText());
+            assertEquals("Active alumnus", label(card, "membershipStatus").getText());
+            assertEquals("Teacher", label(card, "memberType").getText());
             assertEquals("Role: Section Leader", label(card, "role").getText());
             assertTrue(label(card, "role").isVisible());
             assertTrue(label(card, "role").isManaged());
@@ -110,13 +110,16 @@ public class PersonCardTest {
     @Test
     public void constructor_membershipCombinations_displaysCorrectValues() throws Exception {
         runOnFxThread(() -> {
-            for (String status : List.of("member", "active-alumnus", "inactive-alumnus")) {
-                for (String memberType : List.of("student", "teacher")) {
-                    Person person = new PersonBuilder().withStatus(status).withMemberType(memberType).build();
+            String[][] statuses = {{"member", "Member"}, {"active-alumnus", "Active alumnus"},
+                {"inactive-alumnus", "Inactive alumnus"}};
+            String[][] memberTypes = {{"student", "Student"}, {"teacher", "Teacher"}};
+            for (String[] status : statuses) {
+                for (String[] memberType : memberTypes) {
+                    Person person = new PersonBuilder().withStatus(status[0]).withMemberType(memberType[0]).build();
                     PersonCard card = new PersonCard(person, 1);
 
-                    assertEquals(status, label(card, "membershipStatus").getText());
-                    assertEquals(memberType, label(card, "memberType").getText());
+                    assertEquals(status[1], label(card, "membershipStatus").getText());
+                    assertEquals(memberType[1], label(card, "memberType").getText());
                 }
             }
         });
@@ -127,7 +130,7 @@ public class PersonCardTest {
         runOnFxThread(() -> {
             String instrument = "Historical Keyboard and String Instrument Ensemble Performance Specialisation";
             String group = "University Chamber Orchestra Alumni and Student Combined Performance Group";
-            Person person = new PersonBuilder().withName("Card Width")
+            Person person = new PersonBuilder().withName("Alexandra Catherine Montgomery Music Coordinator")
                     .withEmail("music.coordinator.long.contact.address@example.com")
                     .withRole("Student Coordinator for the University Chamber Orchestra")
                     .withInstruments(instrument + ":12").withGroups(group, "X".repeat(150)).build();
@@ -142,6 +145,10 @@ public class PersonCardTest {
                 root.layout();
                 // Settle the label height after the flow pane receives its new viewport width.
                 root.layout();
+                assertLabelVisible(root, (Label) root.lookup("#name"), person.getName().fullName);
+                assertLabelVisible(root, (Label) root.lookup("#id"), "1. ");
+                assertLabelVisible(root, (Label) root.lookup("#memberType"), "Student");
+                assertLabelVisible(root, (Label) root.lookup("#membershipStatus"), "Member");
                 assertLabelVisible(root, (Label) root.lookup("#instruments .label"), instrument + " (12 yrs)");
                 assertLabelVisible(root, (Label) root.lookup("#email"), person.getEmail().value);
                 assertLabelVisible(root, (Label) root.lookup("#role"), "Role: " + person.getRole().orElseThrow().value);

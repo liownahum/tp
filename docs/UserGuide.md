@@ -39,9 +39,23 @@ HiveMind is a **desktop directory for Music CCA members and alumni, optimized fo
 
    * `exit` : Exits the app.
 
+1. Use [Up and Down](#recalling-commands-with-arrow-keys) in the command box to recall recent submissions.
+
 1. Refer to the [Features](#features) section below for details of each command.
 
 --------------------------------------------------------------------------------------------------------------------
+
+## Empty member lists
+
+When the directory has no members, the list area guides you to enter `add` with member details and use `help` for examples. When a search or filter has no matches in a nonempty directory, it shows **No matching members. Enter list to show everyone.** Enter `list` to restore the full directory.
+
+## Member result count
+
+The count above the member list shows **Showing X of Y members**: X is the number of members currently displayed and Y is the total directory size. For a directory with one member, the label uses **member**, for example **Showing 0 of 1 member** when a search has no matches. It stays visible after commands, including when `find` or `filter` displays no matches, and updates when member data changes.
+
+## Command feedback
+
+Command feedback has a **Success** label in green when a command completes and an **Error** label in red when it fails. Startup notices use a neutral **Information** label. Feedback wraps in narrow windows; scroll vertically in the feedback box to read longer messages, or select and copy the text.
 
 ## Features
 
@@ -58,7 +72,7 @@ HiveMind is a **desktop directory for Music CCA members and alumni, optimized fo
 * Items followed by `…`​ can appear zero or more times.<br>
   For example, `[i/INSTRUMENT:YEARS]…​` may be omitted, or written as `i/Violin:5` or `i/Violin:5 i/Piano:2`.
 
-* Parameters can be in any order.<br>
+* Parameters can be in any order. For `export`, their order determines the CSV column order.<br>
   For example, if the command specifies `n/NAME p/PHONE_NUMBER`, `p/PHONE_NUMBER n/NAME` is also acceptable.
 
 * A parameter value cannot contain a space followed by another prefix of the same command, as HiveMind reads that as the start of a new parameter.<br>
@@ -71,6 +85,21 @@ HiveMind is a **desktop directory for Music CCA members and alumni, optimized fo
 
 * If you are using a PDF version of this document, be careful when copying and pasting commands that span multiple lines as space characters surrounding line-breaks may be omitted when copied over to the application.
 </div>
+
+### Recalling commands with arrow keys
+
+With the command box focused, press **↑ (Up)** to recall an older submission or **↓ (Down)** to move towards newer submissions. Recalled text is editable. **Only pressing Enter executes it**; browsing does not change members or the displayed results.
+
+* HiveMind remembers the latest **100 nonblank submissions** in this app session, including failed commands and repeats. Closing the app clears this history.
+* If you have unfinished input, Up saves it while you browse. Down after the newest submission restores that input.
+* If you edit a recalled command, that edited text becomes a new draft. The next Up starts again at the newest submission; Down can restore your edited draft. Stored submissions remain unchanged.
+* Up stops at the oldest available submission; Down stops at your draft. With no history, both keys leave your input unchanged.
+* Use the arrow keys without Shift, Ctrl, Alt or Command/Meta. Modified arrow shortcuts keep their usual editing behaviour.
+* Successful submissions still clear the command box. Failed submissions stay in the box so you can correct them.
+
+For example, submit `list`, then `find Alex`. Type `find Ber` without pressing Enter. Up recalls `find Alex`; another Up recalls `list`. Press Down twice to return to `find Ber`, finish the command and press Enter when ready.
+
+Command recall is separate from `undo` and `redo`: it recalls text and does not reverse changes to member records.
 
 ### Viewing help: `help`
 
@@ -127,6 +156,9 @@ The CSV file must have this exact header and column order:
 name,phone,email,status,memberType,role,instruments,groups
 ```
 
+The default `export` command produces this format. Partial exports, or exports with all eight columns in a different order,
+cannot be imported. Use `export` without field selections when preparing a file for import.
+
 Each subsequent row must have exactly these eight columns:
 
 * `name`, `phone`, and `email` follow the same validation rules as `add`.
@@ -157,12 +189,14 @@ Format: `list`
 
 Each member card displays:
 
-* The member's displayed index and name.
-* Member type (`student` or `teacher`) and membership status (`member`, `active-alumnus`, or `inactive-alumnus`).
+* The member's displayed index and name in a prominent heading.
+* Text badges for member type (`Student` or `Teacher`) and membership status (`Member`, `Active alumnus`, or `Inactive alumnus`). The text identifies each value without relying on colour; command inputs still use the keywords listed under `add`.
 * Phone number and email address.
 * A `Role:` line when a role is recorded. No role line is shown when it is absent.
 * Recorded instruments and their years of experience, sorted alphabetically by instrument name, ignoring case. For example, `Piano (5 yrs)` and `Violin (1 yr)`. No instrument labels appear when none are recorded.
 * A `Groups:` heading with one badge per participation group, ordered alphabetically ignoring case. No groups section is shown when none are recorded.
+
+Long names, contact details, roles, instruments and groups wrap as the window narrows. Scroll down to see details or members below the visible area.
 
 The same card details are shown in `find` and `filter` results. Displayed indices start at `1` and refer to the current list, so a member's index may change after a search, filter or sort. Use the current displayed index for commands such as `edit` and `delete`.
 
@@ -278,22 +312,33 @@ Examples:
 
 Exports the members currently shown in the list to a CSV file.
 
-Format: `export`
+Format: `export [f/FIELD]...`
 
-* Exports the current displayed results. Run `find` or `filter` first to export only matching members; run `list` first to export everyone.
+* Without field selections, `export` writes all eight columns in this order: `name`, `phone`, `email`, `status`, `memberType`, `role`, `instruments`, `groups`.
+* To choose columns, write one `f/FIELD` for each field you need. For example, `export f/name f/phone f/instruments` writes only the `name`, `phone`, and `instruments` columns, in that order.
+* Select any combination of the eight field names above, using their exact spelling and case, including the capital `T` in `memberType`. Each field may be selected only once.
+* Unsupported names (such as `f/address`), empty selections (`f/`), repeated selections (`f/name f/name`), and extra arguments are rejected with an error. No CSV file is created for an invalid command.
+* Exports only the currently displayed members, in their displayed order. Run `find` or `filter` first to choose matching members, and `sort` to choose their order. Run `list` first to export everyone in insertion order.
 * Creates a CSV file in the `exports` folder inside HiveMind’s home folder.
 * Each export receives the first unused numbered filename: `current-results-01.csv`, then `current-results-02.csv`, and so on. Existing export files are not overwritten.
-* The CSV contains these columns: name, phone, email, status, member type, role, instruments, and groups.
+* Values are enclosed in double quotes. A double quote within a value is written as two double quotes.
 * A member with multiple instruments or groups has them recorded in one field, separated by semicolons.
 * A semicolon within an instrument or group name is escaped as `\;`, and a backslash as `\\`.
 * Values beginning with `=`, `+`, `-`, or `@` are prefixed with a space so spreadsheet applications treat them as
-  text. Importing the exported file removes this prefix and restores the original value.
-* Exporting an empty result list still creates a CSV file containing the column headers.
+  text. Importing a compatible full export removes this prefix and restores the original value.
+* Exporting an empty result list still creates a CSV file containing only the selected column headers, or all eight headers if no fields were selected.
+* Exporting does not change member records, the displayed results, or undo/redo history.
+
+**Import compatibility:** Partial exports cannot be imported using `import`. The importer requires all eight columns in
+the default order. An export containing all eight columns in a different order is also incompatible. Use `export`
+without field selections to retain the existing import-compatible format.
 
 Examples:
 
-* `find alex` followed by `export` exports the members whose names contain `alex`.
-* `filter s/member i/Violin` followed by `export` exports the current members who play violin.
+* `export` exports all eight fields for the currently displayed members.
+* `find alex` followed by `export f/name f/phone` exports only the names and phone numbers of members whose names contain `alex`.
+* `filter s/member i/Violin` followed by `sort name`, then `export f/name f/phone f/instruments`, exports those three fields for current members who play violin, in the displayed name order.
+* `export f/groups f/name` writes the `groups` column before the `name` column.
 
 ### Deleting a person: `delete`
 
@@ -410,7 +455,7 @@ Action | Format, Examples
 **Clear** | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
 **Edit** | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [s/STATUS] [ty/TYPE] [r/ROLE] [i/INSTRUMENT:YEARS]…​ [g/GROUP]…​`<br> e.g., `edit 2 n/James Lee g/Chamber Orchestra`
-**Export** | `export`
+**Export** | `export [f/FIELD]...`<br> e.g., `export f/name f/phone f/instruments`
 **Find** | `find KEYWORD [MORE_KEYWORDS]…`<br> e.g., `find alex david`
 **Filter** | `filter [s/STATUS]... [i/NAME[:MIN_YEARS]]... [ty/TYPE]... [r/ROLE]... [g/GROUP]...`<br> e.g., `filter s/member i/Violin:3 g/Chamber Orchestra`
 **List** | `list`

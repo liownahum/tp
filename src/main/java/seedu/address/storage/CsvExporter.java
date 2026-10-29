@@ -5,21 +5,20 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import seedu.address.commons.util.FileUtil;
-import seedu.address.model.person.Group;
-import seedu.address.model.person.Instrument;
 import seedu.address.model.person.Person;
 
 /**
  * A class that writes supplied member information to a CSV file.
  */
 public class CsvExporter {
-    public static final String HEADER = "name,phone,email,status,memberType,role,instruments,groups";
+    public static final String HEADER = ExportField.DEFAULT_FIELDS.stream()
+            .map(ExportField::getHeader)
+            .collect(Collectors.joining(","));
 
     /**
      * Exports the given people to a new CSV file in the specified directory.
@@ -30,11 +29,29 @@ public class CsvExporter {
      * @throws IOException if the file cannot be written.
      */
     public static Path export(List<Person> people, Path exportDirectory) throws IOException {
+        return export(people, exportDirectory, ExportField.DEFAULT_FIELDS);
+    }
+
+    /**
+     * Exports the selected columns in the given order to a new CSV file.
+     *
+     * @param people the people to export, in displayed order.
+     * @param exportDirectory the directory in which to create the CSV file.
+     * @param fields the non-empty list of distinct columns to export.
+     * @return the path of the written CSV file.
+     * @throws IllegalArgumentException if the selection is empty or contains repeated fields.
+     * @throws IOException if the file cannot be written.
+     */
+    public static Path export(List<Person> people, Path exportDirectory, List<ExportField> fields) throws IOException {
         requireNonNull(people);
         requireNonNull(exportDirectory);
+        List<ExportField> selectedFields = List.copyOf(fields);
+        if (selectedFields.isEmpty() || new HashSet<>(selectedFields).size() != selectedFields.size()) {
+            throw new IllegalArgumentException("Select at least one export field without repetitions.");
+        }
 
         Path outputPath = getNextAvailablePath(exportDirectory);
-        String csvContent = buildCsvContent(people);
+        String csvContent = buildCsvContent(people, selectedFields);
 
         FileUtil.createIfMissing(outputPath);
         FileUtil.writeToFile(outputPath, csvContent);
@@ -42,43 +59,23 @@ public class CsvExporter {
         return outputPath;
     }
 
-    private static String buildCsvContent(List<Person> people) {
-        StringBuilder csvContent = new StringBuilder(HEADER);
+    private static String buildCsvContent(List<Person> people, List<ExportField> fields) {
+        StringBuilder csvContent = new StringBuilder(fields.stream()
+                .map(ExportField::getHeader)
+                .collect(Collectors.joining(",")));
 
         for (Person person : people) {
             csvContent.append(System.lineSeparator());
-            csvContent.append(toCsvRow(person));
+            csvContent.append(toCsvRow(person, fields));
         }
 
         return csvContent.toString();
     }
 
-    private static String toCsvRow(Person person) {
-        return String.join(",",
-            escape(person.getName().toString()),
-            escape(person.getPhone().toString()),
-            escape(person.getEmail().toString()),
-            escape(person.getStatus().toString()),
-            escape(person.getMemberType().toString()),
-            escape(person.getRole().map(Object::toString).orElse("")),
-            escape(formatInstruments(person.getInstruments())),
-            escape(formatGroups(person.getGroups())));
-    }
-
-    private static String formatInstruments(Set<Instrument> instruments) {
-        return instruments.stream()
-            .sorted(Comparator.comparing(Instrument::getName, String.CASE_INSENSITIVE_ORDER))
-            .map(Instrument::toString)
-            .map(CsvListCodec::escape)
-            .collect(Collectors.joining(";"));
-    }
-
-    private static String formatGroups(Set<Group> groups) {
-        return groups.stream()
-            .sorted(Comparator.comparing(Group::getName, String.CASE_INSENSITIVE_ORDER))
-            .map(Group::toString)
-            .map(CsvListCodec::escape)
-            .collect(Collectors.joining(";"));
+    private static String toCsvRow(Person person, List<ExportField> fields) {
+        return fields.stream()
+            .map(field -> escape(field.getValue(person)))
+            .collect(Collectors.joining(","));
     }
 
     private static String escape(String value) {

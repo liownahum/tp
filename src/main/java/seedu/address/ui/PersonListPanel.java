@@ -1,9 +1,13 @@
 package seedu.address.ui;
 
+import static seedu.address.commons.util.CollectionUtil.requireAllNonNull;
+
 import java.util.logging.Logger;
 
+import javafx.beans.binding.Bindings;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.layout.Region;
@@ -20,13 +24,35 @@ public class PersonListPanel extends UiPart<Region> {
     @FXML
     private ListView<Person> personListView;
 
+    @FXML
+    private Label emptyState;
+
+    @FXML
+    private Label resultCount;
+
     /**
-     * Creates a {@code PersonListPanel} with the given {@code ObservableList}.
+     * Creates a panel displaying the complete directory.
      */
     public PersonListPanel(ObservableList<Person> personList) {
+        this(personList, personList);
+    }
+
+    /**
+     * Creates a panel observing the displayed persons and the complete directory independently.
+     */
+    public PersonListPanel(ObservableList<Person> personList, ObservableList<Person> allPersons) {
         super(FXML);
+        requireAllNonNull(personList, allPersons);
         personListView.setItems(personList);
         personListView.setCellFactory(listView -> new PersonListViewCell());
+        emptyState.textProperty().bind(Bindings.when(Bindings.isEmpty(allPersons))
+                .then("No members yet. Enter add with member details to start your directory. "
+                        + "Enter help for command examples.")
+                .otherwise("No matching members. Enter list to show everyone."));
+        emptyState.maxWidthProperty().bind(personListView.widthProperty().subtract(40));
+        resultCount.textProperty().bind(Bindings.format("Showing %d of %d %s",
+                Bindings.size(personList), Bindings.size(allPersons),
+                Bindings.when(Bindings.size(allPersons).isEqualTo(1)).then("member").otherwise("members")));
     }
 
     /**

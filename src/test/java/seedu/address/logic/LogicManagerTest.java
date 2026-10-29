@@ -35,6 +35,7 @@ import seedu.address.logic.commands.RedoCommand;
 import seedu.address.logic.commands.UndoCommand;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.logic.parser.exceptions.ParseException;
+import seedu.address.model.AddressBook;
 import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
 import seedu.address.model.ReadOnlyAddressBook;
@@ -62,6 +63,20 @@ public class LogicManagerTest {
         JsonUserPrefsStorage userPrefsStorage = new JsonUserPrefsStorage(temporaryFolder.resolve("userPrefs.json"));
         StorageManager storage = new StorageManager(addressBookStorage, userPrefsStorage);
         logic = new LogicManager(model, storage);
+    }
+
+    @Test
+    public void getPersonList_isUnmodifiableAndRemainsLiveAcrossResets() {
+        var persons = logic.getPersonList();
+        assertThrows(UnsupportedOperationException.class, () -> persons.add(AMY));
+        model.addPerson(AMY);
+        model.updateFilteredPersonList(person -> false);
+        assertEquals(List.of(AMY), persons);
+        assertTrue(logic.getFilteredPersonList().isEmpty());
+        model.setAddressBook(new AddressBook());
+        assertTrue(persons.isEmpty());
+        model.addPerson(BOB);
+        assertEquals(List.of(BOB), persons);
     }
 
     @Test

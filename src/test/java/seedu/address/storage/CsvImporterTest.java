@@ -144,6 +144,15 @@ public class CsvImporterTest {
     }
 
     @Test
+    public void importPeople_partialExport_rejectsMissingColumns() throws Exception {
+        Path exportedFile = CsvExporter.export(List.of(new PersonBuilder().build()), temporaryFolder,
+                List.of(ExportField.NAME, ExportField.PHONE, ExportField.INSTRUMENTS));
+
+        assertThrows(IllegalValueException.class, "CSV header must be " + HEADER + ".", () ->
+                CsvImporter.importPeople(exportedFile));
+    }
+
+    @Test
     public void importPeople_valuesWithSurroundingWhitespace_parsesTrimmedValues() throws Exception {
         Path csvFile = writeCsv(HEADER,
                 " Cara Tan , 93456789 , cara@example.com , member , student , Leader , Piano:3 , Band ");

@@ -3,6 +3,8 @@ package seedu.address.ui;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import seedu.address.logic.commands.CommandResult;
 import seedu.address.logic.commands.exceptions.CommandException;
@@ -17,6 +19,8 @@ public class CommandBox extends UiPart<Region> {
     private static final String FXML = "CommandBox.fxml";
 
     private final CommandExecutor commandExecutor;
+    private final CommandHistory commandHistory = new CommandHistory();
+    private boolean isRecallingHistory;
 
     @FXML
     private TextField commandTextField;
@@ -27,8 +31,13 @@ public class CommandBox extends UiPart<Region> {
     public CommandBox(CommandExecutor commandExecutor) {
         super(FXML);
         this.commandExecutor = commandExecutor;
-        // calls #setStyleToDefault() whenever there is a change to the text of the command box.
-        commandTextField.textProperty().addListener((unused1, unused2, unused3) -> setStyleToDefault());
+        commandTextField.textProperty().addListener((unused1, unused2, unused3) -> {
+            setStyleToDefault();
+            if (!isRecallingHistory) {
+                commandHistory.resetNavigation();
+            }
+        });
+        commandTextField.addEventFilter(KeyEvent.KEY_PRESSED, this::handleHistoryNavigation);
     }
 
     /**
@@ -41,12 +50,42 @@ public class CommandBox extends UiPart<Region> {
             return;
         }
 
+        commandHistory.add(commandText);
         try {
             commandExecutor.execute(commandText);
             commandTextField.setText("");
         } catch (CommandException | ParseException e) {
             setStyleToIndicateCommandFailure();
         }
+    }
+
+    /**
+     * Recalls submissions without executing them or intercepting modified editing shortcuts.
+     */
+    private void handleHistoryNavigation(KeyEvent event) {
+        if (event.isShiftDown() || event.isControlDown() || event.isAltDown() || event.isMetaDown()) {
+            return;
+        }
+        String currentInput = commandTextField.getText();
+        String recalledInput;
+        if (event.getCode() == KeyCode.UP) {
+            recalledInput = commandHistory.previous(currentInput);
+        } else if (event.getCode() == KeyCode.DOWN) {
+            recalledInput = commandHistory.next(currentInput);
+        } else {
+            return;
+        }
+
+        if (!recalledInput.equals(currentInput)) {
+            isRecallingHistory = true;
+            try {
+                commandTextField.setText(recalledInput);
+                commandTextField.positionCaret(recalledInput.length());
+            } finally {
+                isRecallingHistory = false;
+            }
+        }
+        event.consume();
     }
 
     /**

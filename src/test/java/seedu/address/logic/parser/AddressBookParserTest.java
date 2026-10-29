@@ -31,6 +31,7 @@ import seedu.address.logic.parser.exceptions.ParseException;
 import seedu.address.model.person.InstrumentCriterion;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
 import seedu.address.model.person.Person;
+import seedu.address.storage.ExportField;
 import seedu.address.testutil.EditPersonDescriptorBuilder;
 import seedu.address.testutil.PersonBuilder;
 import seedu.address.testutil.PersonUtil;
@@ -76,7 +77,9 @@ public class AddressBookParserTest {
 
     @Test
     public void parseCommand_export() throws Exception {
-        assertTrue(parser.parseCommand(ExportCommand.COMMAND_WORD) instanceof ExportCommand);
+        assertEquals(new ExportCommand(), parser.parseCommand(ExportCommand.COMMAND_WORD));
+        assertEquals(new ExportCommand(List.of(ExportField.NAME, ExportField.PHONE, ExportField.INSTRUMENTS)),
+                parser.parseCommand("export f/name f/phone f/instruments"));
         assertThrows(ParseException.class,
                 String.format(MESSAGE_INVALID_COMMAND_FORMAT, ExportCommand.MESSAGE_USAGE), ()
                     -> parser.parseCommand(ExportCommand.COMMAND_WORD + " n/Alex"));

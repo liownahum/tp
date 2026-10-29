@@ -83,11 +83,28 @@ The `UI` component,
 * keeps a reference to the `Logic` component, because the `UI` relies on the `Logic` to execute commands.
 * depends on some classes in the `Model` component because it displays `Person` objects from the model.
 
+#### Command input and recall
+
+`CommandBox` owns one package-private `CommandHistory` for its lifetime. This helper is UI state rather than member data: it stores at most 100 exact nonblank submissions, including duplicates and failures, and is never persisted. Oldest entries are evicted when the capacity is reached. The UI class diagram focuses on visible components; this internal helper does not extend `UiPart`.
+
+`CommandHistory` keeps a cursor between the oldest entry and a position just after the newest entry. Up from the latter position captures the current input as a draft, then visits older entries. Down visits newer entries and restores the draft when the cursor reaches the end. Boundaries do not wrap. An edit or new submission resets navigation to the end without changing previously recorded text.
+
+`CommandBox` filters unmodified Up/Down key presses on its text field. Programmatic recall uses `isRecallingHistory` so the existing text-change listener clears error styling without resetting the browsing cursor. User edits reset the cursor, making an edited recall a new draft. Replacing text positions the caret at the end. Enter records the nonblank input before calling the executor, so parsing and execution failures can both be recalled. Existing success clearing and failure feedback remain in place. Browsing never calls the executor or changes the address book's undo/redo history.
+
+`CommandHistoryTest` tests the bounded state machine without JavaFX. `CommandBoxTest` dispatches keyboard and action events through the real FXML text field with a recording executor, covering draft restoration, edited recalls, modifiers, failed submissions and independent histories. Like `PersonCardTest`, the graphical class requires a graphical session and `HIVEMIND_UI_TESTS=true`:
+
+```sh
+./gradlew test --tests seedu.address.ui.CommandHistoryTest
+HIVEMIND_UI_TESTS=true ./gradlew test --tests seedu.address.ui.CommandBoxTest --rerun-tasks
+```
+
+On Windows PowerShell, set `$env:HIVEMIND_UI_TESTS = "true"` before running the corresponding `./gradlew.bat` command. Without this variable, only the graphical class is skipped; the history state-machine tests still run in ordinary CI.
+
 #### Member cards
 
 `PersonListPanel` observes the filtered and sorted person view exposed by `Logic`. Its list cells create a `PersonCard` for each displayed person, passing the cell's one-based index. When `find`, `filter`, `sort`, or `list` changes the displayed results, the list updates the cards and their indices. The existing UI class diagram shows this relationship; the card enhancement adds no new classes or dependencies.
 
-`PersonCard` loads `PersonListCard.fxml` through `UiPart`. The FXML `fx:id` attributes match the controller's `@FXML` fields. The constructor reads the person's public getters to populate the name, contact details, membership status, member type, optional role, and instruments. Type and status use the model's keyword strings. Instrument labels use `Instrument.toDisplayString()` and are sorted by name, ignoring case.
+`PersonCard` loads `PersonListCard.fxml` through `UiPart`. The FXML `fx:id` attributes match the controller's `@FXML` fields. The constructor reads the person's public getters to populate the name, contact details, membership status, member type, optional role, and instruments. Type and status appear as text badges. `PersonCard.toDisplayText` capitalises the first character and replaces keyword hyphens with spaces for display (for example, `active-alumnus` becomes `Active alumnus`); model values, command keywords and storage remain unchanged. Card-specific styles in `DarkTheme.css` distinguish the name heading, contact details, secondary information and badges without changing the rest of the theme. Instrument labels use `Instrument.toDisplayString()` and are sorted by name, ignoring case.
 
 When no role is recorded, the role label has both `visible` and `managed` set to `false`: it is hidden and does not reserve layout space. Name, contact, and role labels allow text wrapping, while flow panes allow the membership details and instrument labels to move onto additional rows as space narrows. These changes affect presentation only; the model and stored records are unchanged.
 
@@ -98,6 +115,18 @@ HIVEMIND_UI_TESTS=true ./gradlew test --tests seedu.address.ui.PersonCardTest --
 ```
 
 On Windows PowerShell, set `$env:HIVEMIND_UI_TESTS = "true"` and run `./gradlew.bat test --tests seedu.address.ui.PersonCardTest --rerun-tasks`. These tests do not replace visual checks for wrapping and scrolling; use the member-card scenarios in the manual-testing section below.
+
+#### Empty member lists
+
+`MainWindow` supplies the displayed list and the full directory through `Logic.getPersonList()` to `PersonListPanel`. A wrapped `ListView` placeholder binds its guidance to whether the full directory is empty; `ListView` controls its visibility from the displayed list. Observing the full list prevents stale guidance when a nonmatching record is removed or the directory is reset while no results are shown. The placeholder width follows the list viewport. `PersonListPanelEmptyStateTest` exercises both states, model transitions, and narrow rendering with `HIVEMIND_UI_TESTS=true`.
+
+#### Member result count
+
+`Logic.getPersonList()` exposes the address book's unmodifiable observable full list. `MainWindow` supplies this and the filtered/sorted list to `PersonListPanel`. The result-count label binds to both lists, so a change to the total updates the label even if the displayed results stay unchanged. The full-list view stays live across resets, imports, undo/redo, and save-failure rollback. `PersonListPanelCountTest` exercises these observable updates and narrow layout with `HIVEMIND_UI_TESTS=true`.
+
+#### Command feedback
+
+`MainWindow` passes `FeedbackType.SUCCESS` after `Logic.execute` returns and `FeedbackType.ERROR` for `CommandException` or `ParseException`, including save failures. Startup notices use `INFORMATION`. `ResultDisplay` preserves the message text, sets an explicit outcome label and CSS class, and resets the scroll position for each message. The read-only `TextArea` wraps text and retains vertical scrolling and selection. `ResultDisplayTest` checks the rendered FXML, outcome transitions, narrow layout, and command routing with a storage failure. Enable these graphical tests with `HIVEMIND_UI_TESTS=true`.
 
 ### Logic component
 
@@ -235,13 +264,23 @@ The command replaces the predicate on the full directory's `FilteredList`, repor
 
 ### Exporting current results
 
-`AddressBookParser` delegates `export` to `ExportCommandParser`, which rejects arguments because the command takes none. When executed, `ExportCommand` obtains the current displayed results through `Model#getFilteredPersonList()` and passes them to `CsvExporter` with the `exports` directory. Exporting does not modify the model, so it does not save the address book or create an undo state.
+`AddressBookParser` delegates `export [f/FIELD]...` to `ExportCommandParser`. With no arguments, the parser creates a default `ExportCommand` using `ExportField.DEFAULT_FIELDS`: name, phone, email, status, memberType, role, instruments, and groups. Otherwise, it tokenizes repeated `f/` values, matches their exact case-sensitive names against `ExportField` headers, and preserves the requested order. Unsupported, empty or repeated field selections and unexpected arguments cause a `ParseException` before execution, so no file is created.
 
-`CsvExporter` creates CSV content with columns for name, phone, email, status, member type, role, instruments, and groups. Each field is quoted, with embedded quotation marks escaped. `CsvCellCodec` prefixes values that spreadsheet applications could interpret as formulas with a space. `CsvImporter` removes this prefix to preserve export/import round trips. `CsvExporter` sorts a person's instruments and groups by name and joins them with semicolons. `CsvListCodec` escapes semicolons and backslashes within each list value; `CsvImporter` decodes them before constructing instruments and groups. Empty results produce a file containing only the CSV header.
+`ExportCommand` stores an immutable copy of the selected fields. Its constructors reject empty selections and repeated fields with an `IllegalArgumentException`; null lists or entries cause a `NullPointerException`. When executed, it obtains the current results through `Model#getFilteredPersonList()`, which returns the filtered and sorted display view, and passes them to `CsvExporter.export(currentResults, exportDirectory, fields)`. Exporting does not update records or the display view. `requiresSave()` returns `false`, so `LogicManager` neither saves the address book nor changes undo/redo history.
 
-Before writing, `CsvExporter` finds the first unused filename in the form `current-results-XX.csv`, beginning with `current-results-01.csv`; existing exports are therefore preserved rather than overwritten. If file creation or writing fails, `ExportCommand` converts the `IOException` into a `CommandException`. Parser and exporter tests cover recognition of the command, normal and empty exports, and selecting the first available numbered filename while preserving existing files.
+`ExportField` defines each supported header and its value extractor. `CsvExporter` builds the header and each row from the same ordered selection. The existing two-argument `export(people, exportDirectory)` overload delegates to the full default selection. The three-argument overload also validates the selection before creating a file, protecting direct callers. Empty results produce only the selected headers. `CsvImporter` still requires the original eight headers in their original order, so partial exports and reordered full exports cannot be imported; the default export retains import compatibility.
 
-![Export command sequence diagram](images/ExportSequenceDiagram.png)
+Each exported value uses the existing CSV quoting and escaping: embedded quotation marks are doubled, and `CsvCellCodec` prefixes values that spreadsheet applications could interpret as formulas with a space. `ExportField` sorts instruments and groups by name, applies `CsvListCodec` to escape semicolons and backslashes within each list value, and joins the values with semicolons. `CsvImporter` decodes these escapes and removes the spreadsheet protection prefix when importing a compatible full export.
+
+Before writing, `CsvExporter` finds the first unused filename in the form `current-results-XX.csv`, beginning with `current-results-01.csv`; existing exports are preserved rather than overwritten. `ExportCommand` logs successful exports at `INFO` with the row count, ordered columns and output path. If writing fails, it logs the row count, columns, export directory and exception stack trace at `WARNING`, then converts the `IOException` into a `CommandException`. These export outcome logs do not include member values or CSV contents.
+
+`ExportCommandParserTest` and `AddressBookParserTest` cover default and selected-field commands and invalid syntax. `ExportCommandTest` covers constructor validation, results after `find`, `filter` and `sort`, empty results, immutable selections, and preservation of records and undo/redo history. `CsvExporterTest` covers selected column order, CSV quoting, list escaping, formula protection, empty results, and preservation of existing files and filename numbering. `CsvImporterTest` covers default export/import round trips and rejection of partial exports.
+
+The following sequence diagram traces execution of a parsed `export f/name f/phone f/instruments` command. Parsing, model snapshots, logging, CSV encoding internals and error paths are omitted.
+
+![Export sequence diagram showing field selection, retrieval of displayed results, and CSV creation](images/ExportSequenceDiagram.png)
+
+[Open the sequence diagram at full size](images/ExportSequenceDiagram.png). [PlantUML source](diagrams/ExportSequenceDiagram.puml).
 
 The following sequence diagram traces `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra`, using all five supported fields. Parsing creates a `FilterCommand` containing the criteria; executing that command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`.
 
@@ -631,6 +670,18 @@ testers are expected to do more *exploratory* testing.
 
 1. _{ more test cases …​ }_
 
+### Checking command feedback
+
+Use Java 25 and the released JAR in a fresh, disposable writable folder. Keep the sample records for this scenario.
+
+1. Before entering a command, check that the feedback label is the neutral `Information` label.
+1. Run `list`.<br>
+   Expected: A green `Success` label accompanies `Listed all persons.`
+1. Run `add` without parameters, then resize the window to its minimum 450 × 600.<br>
+   Expected: A red `Error` label accompanies the invalid-format message and add usage. The text wraps within the feedback box; scroll vertically to read the complete usage. Select the text and check that it can be copied. No member is added.
+1. Run `list` again.<br>
+   Expected: The label returns to green `Success`, the previous error is replaced, and the new feedback starts at the top of the box. The same sample records remain visible.
+
 ### Adding members and checking possible duplicates
 
 Use Java 25 and the released JAR in a disposable writable folder. Run `clear` before this scenario.
@@ -667,6 +718,21 @@ Start another disposable scenario with `clear`.
 1. Restart the application.<br>
    Expected: Alicia still has no groups and Ben retains both groups. Resize the window and check that the badges wrap without overlap.
 
+### Recalling commands
+
+Start a new app session with sample records or a disposable data directory. Keep the command box focused for the arrow-key checks.
+
+1. Submit `list`, then `find Alex`. Press Up twice, then Up again.<br>
+   Expected: The input recalls `find Alex`, then `list`, and stays at `list`. Results do not change while browsing. Down recalls `find Alex`; another Down restores the empty input.
+1. Type `find Ber` without Enter. Press Up, then Down.<br>
+   Expected: The input recalls `find Alex`, then restores the unfinished `find Ber`. No command runs.
+1. Press Up and edit the recalled text to `find Bernice`. Press Up, then Down, then Enter.<br>
+   Expected: Up recalls `find Alex`, Down restores `find Bernice`, and only Enter executes it. Up now recalls `find Bernice`; a second Up still recalls the original `find Alex`.
+1. Submit `unknowncommand`. Press Up twice.<br>
+   Expected: The failed command initially stays in the box with error styling. It can be recalled as the newest submission; another Up reaches `find Bernice` and clears the command box's error styling. Browsing does not execute either command or change the result message.
+1. Submit a blank input, then try Up/Down. Close and restart HiveMind, type a draft and press Up/Down again.<br>
+   Expected: Blank input creates no history entry. After restarting, the previous session's history is unavailable and the draft remains unchanged.
+
 ### Viewing member cards
 
 Use a disposable directory for these checks so the test records do not affect your real data.
@@ -674,15 +740,32 @@ Use a disposable directory for these checks so the test records do not affect yo
 1. Add a member with all fields: `add n/Alicia Tan p/90000002 e/alicia@example.com s/member ty/student r/Section Leader i/Violin:1 i/Piano:5`.<br>
    Expected: The card shows name, phone, email, type, status, role, and instruments. Piano appears before Violin, with `5 yrs` and `1 yr` respectively.
 1. Add a member without optional fields: `add n/Jamie Koh p/90000001 e/jamie@example.com s/member`.<br>
-   Expected: Type is `student`; there is no role line or instrument label, and no blank role row.
+   Expected: The type badge reads `Student`; there is no role line or instrument label, and no blank role row.
 1. Add a teacher/alumnus: `add n/Marcus Lee p/90000003 e/marcus@example.com s/active-alumnus ty/teacher r/Conductor i/Cello:20`.<br>
-   Expected: Type is `teacher`, status is `active-alumnus`, and the role and instrument are visible.
+   Expected: The badges read `Teacher` and `Active alumnus`, and the role and instrument are visible.
 1. Run `find alicia marcus`, then `filter i/Piano`, then `find zzznomatch`, then `list`.<br>
    Expected: Each result shows the appropriate members with complete card details and indices starting at `1`; the no-match search shows no cards; `list` restores all members in insertion order.
 1. Add a member with a long name, email and role, and several instruments. Resize the window narrower and scroll through the list.<br>
-   Expected: Text wraps without overlapping other fields, instrument labels flow onto additional rows, and all recorded details remain accessible. Check both full and empty optional fields again after scrolling.
+   Expected: The name remains prominent and the membership badges remain readable without relying on colour. Text wraps without overlapping other fields, instrument labels flow onto additional rows, and all recorded details remain accessible. Check both full and empty optional fields again after scrolling.
 1. Run `add n/Card Width p/91234567 e/music.coordinator.long.contact.address@example.com s/member r/Student Coordinator for the University Chamber Orchestra i/Historical Keyboard and String Instrument Ensemble Performance Specialisation:12 g/University Chamber Orchestra Alumni and Student Combined Performance Group`. Resize the window to its minimum 450 × 600, then widen and narrow it again.<br>
    Expected: The full instrument name and `12 yrs` remain readable on wrapped lines, as does the group name. Neither badge pushes contact details or other card content beyond the visible right edge. Scroll vertically if the card is taller than the available area.
+
+### Checking persistent member counts
+
+Use Java 25 and the released JAR in a disposable writable folder. These steps clear test data; do not use a real directory.
+
+1. Run `clear`.<br>
+   Expected: The label above the member list shows `Showing 0 of 0 members`.
+1. Run `add n/Alice p/11111 e/alice@example.com s/member`, then `add n/Bob p/22222 e/bob@example.com s/inactive-alumnus`.<br>
+   Expected: The count is `Showing 2 of 2 members`.
+1. Run `find Alice`, then `filter s/inactive-alumnus`, then `find Nobody`.<br>
+   Expected: The counts are `Showing 1 of 2 members`, `Showing 1 of 2 members`, and `Showing 0 of 2 members` respectively. The label remains visible with no matches.
+1. Run `find` without a keyword.<br>
+   Expected: An error is shown, and the count remains `Showing 0 of 2 members`.
+1. Run `list`, `delete 1`, `undo`, then `redo`.<br>
+   Expected: The counts are `Showing 2 of 2 members`, `Showing 1 of 1 member`, `Showing 2 of 2 members`, and `Showing 1 of 1 member` respectively.
+1. Resize the window to its minimum 450 × 600.<br>
+   Expected: The count remains readable above the member list, independently of the last command's feedback.
 
 ### Sorting displayed members
 
@@ -711,6 +794,21 @@ Use a disposable directory with only these four records, added in this order:
    Expected: The empty results stay empty and sorting reports success.
 1. Close and reopen the app.<br>
    Expected: The remaining records appear in stored directory order, Amy, Bob, alice. Status changes and deletion persist, but sorting does not.
+
+### Checking empty member lists
+
+Use Java 25 and the released JAR in a disposable writable folder. These steps clear test data; do not use a real directory.
+
+1. Run `clear`.<br>
+   Expected: The list area starts with `No members yet.` and offers `add` and `help` guidance.
+1. Run `add n/Alice p/11111 e/alice@example.com s/member`.<br>
+   Expected: Alice's card replaces the empty-directory guidance.
+1. Run `find Nobody`, then resize the window to its minimum 450 × 600.<br>
+   Expected: The list area says `No matching members. Enter list to show everyone.` The entire message remains readable on wrapped lines, without a card being shown.
+1. Run `list`, then `filter s/inactive-alumnus`.<br>
+   Expected: `list` restores Alice and hides the guidance; the filter shows the no-matching-members guidance again.
+1. Run `clear`, `undo`, then `redo`.<br>
+   Expected: `clear` shows the empty-directory guidance, `undo` restores Alice with no guidance, and `redo` shows the empty-directory guidance again.
 
 ### Deleting a person
 
