@@ -1,64 +1,91 @@
 @startuml
 !include style.puml
 skinparam ArrowFontStyle plain
-skinparam BoxPadding 30
+skinparam sequenceMessageAlign left
+skinparam BoxPadding 10
+<style>
+participant {
+    Padding 5
+}
+</style>
 
 box Logic LOGIC_COLOR_T1
 participant ":LogicManager" as LogicManager LOGIC_COLOR
-participant ":AddressBookParser" as AddressBookParser LOGIC_COLOR
+participant ":AddressBook\nParser" as AddressBookParser LOGIC_COLOR
+participant ":UndoCommand\nParser" as UndoCommandParser LOGIC_COLOR
 participant "u:UndoCommand" as UndoCommand LOGIC_COLOR
 end box
 
 box Model MODEL_COLOR_T1
-participant ":Model" as Model MODEL_COLOR
+participant "m:Model" as Model MODEL_COLOR
 end box
 
 box Storage STORAGE_COLOR_T1
 participant ":Storage" as Storage STORAGE_COLOR
 end box
-[-> LogicManager : execute(undo)
+
+[-> LogicManager : execute("undo 2")
 activate LogicManager
-
-LogicManager -> AddressBookParser : parseCommand(undo)
+LogicManager -> AddressBookParser : parseCommand("undo 2")
 activate AddressBookParser
-
+create UndoCommandParser
+AddressBookParser -> UndoCommandParser
+AddressBookParser -> UndoCommandParser : parse(" 2")
+activate UndoCommandParser
+note over UndoCommandParser
+parseCount(" 2") = 2
+Default count = 1.
+end note
 create UndoCommand
-AddressBookParser -> UndoCommand
-activate UndoCommand
-
-UndoCommand --> AddressBookParser
-deactivate UndoCommand
-
+UndoCommandParser -> UndoCommand : new UndoCommand(2)
+UndoCommandParser <-- UndoCommand : u
+UndoCommandParser --> AddressBookParser : u
+deactivate UndoCommandParser
 AddressBookParser --> LogicManager : u
 deactivate AddressBookParser
 
-LogicManager -> UndoCommand : execute()
+LogicManager -> UndoCommand : execute(m)
 activate UndoCommand
-
-UndoCommand -> Model : undoAddressBook()
+UndoCommand -> Model : getUndoableChangeCount()
 activate Model
-
+Model --> UndoCommand : undoableCount
+deactivate Model
+note over UndoCommand, Model
+count <= undoableCount
+or fail before any undo.
+end note
+loop count times (2 in this example)
+    UndoCommand -> Model : undoAddressBook()
+    activate Model
+    Model --> UndoCommand
+    deactivate Model
+end
+UndoCommand -> Model : updateFilteredPersonList(\nPREDICATE_SHOW_ALL_PERSONS)
+activate Model
 Model --> UndoCommand
 deactivate Model
-
 UndoCommand --> LogicManager : result
 deactivate UndoCommand
-UndoCommand -[hidden]-> LogicManager : result
-destroy UndoCommand
 
-LogicManager -> Storage : saveAddressBook()
+LogicManager -> UndoCommand : requiresSave()
+activate UndoCommand
+UndoCommand --> LogicManager : true
+deactivate UndoCommand
+LogicManager -> Model : getAddressBook()
+activate Model
+Model --> LogicManager : addressBook
+deactivate Model
+LogicManager -> Storage : saveAddressBook(addressBook)
 activate Storage
-
 Storage --> LogicManager
 deactivate Storage
-
-LogicManager -> Model : commitAddressBook()
-activate Model
-
-note right of Model : no new state:\ndata equals the\nrestored state
-Model --> LogicManager
-deactivate Model
-
-[<--LogicManager
+LogicManager -> UndoCommand : recordsChange()
+activate UndoCommand
+UndoCommand --> LogicManager : false
+deactivate UndoCommand
+note over LogicManager, UndoCommand
+No history commit after undo.
+end note
+[<-- LogicManager : result
 deactivate LogicManager
 @enduml

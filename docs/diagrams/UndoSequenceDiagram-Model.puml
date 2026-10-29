@@ -1,23 +1,34 @@
 @startuml
 !include style.puml
 skinparam ArrowFontStyle plain
+skinparam sequenceMessageAlign left
 
 box Model MODEL_COLOR_T1
-participant ":Model" as Model MODEL_COLOR
+participant "m:Model" as Model MODEL_COLOR
 participant ":VersionedAddressBook" as VersionedAddressBook MODEL_COLOR
 end box
 
 [-> Model : undoAddressBook()
 activate Model
-
 Model -> VersionedAddressBook : undo()
 activate VersionedAddressBook
-
-VersionedAddressBook -> VersionedAddressBook :resetData(ReadOnlyAddressBook)
-VersionedAddressBook --> Model :
+VersionedAddressBook -> VersionedAddressBook : canUndo()
+activate VersionedAddressBook
+VersionedAddressBook --> VersionedAddressBook : true
 deactivate VersionedAddressBook
-
+note right of VersionedAddressBook
+currentStatePointer--
+end note
+VersionedAddressBook -> VersionedAddressBook : resetData(addressBookStateList\n.get(currentStatePointer))
+activate VersionedAddressBook
+VersionedAddressBook --> VersionedAddressBook
+deactivate VersionedAddressBook
+VersionedAddressBook --> Model
+deactivate VersionedAddressBook
 [<-- Model
 deactivate Model
 
+legend bottom
+One successful undo step; Logic repeats this for the requested count.
+endlegend
 @enduml

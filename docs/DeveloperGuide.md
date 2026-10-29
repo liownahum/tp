@@ -202,6 +202,25 @@ Classes used by multiple components are in the `seedu.address.commons` package.
 
 This section describes some noteworthy details on how certain features are implemented.
 
+### Application file locations
+
+`ApplicationPaths` provides one application home for every file owned by HiveMind. In a packaged launch, it converts
+the application code-source URI to a `Path`, resolves the canonical JAR location, and uses the JAR's parent directory.
+Converting the URI through `Path.of(URI)` preserves spaces and non-ASCII characters correctly. In a development or
+test launch, where the code source is a classes directory rather than a packaged file, it retains the normalized
+working directory for compatibility with Gradle and IDE launches.
+
+`LogsCenter` obtains its log path from `ApplicationPaths` during its initial static configuration, before the first
+application log entry can create a file. `MainApp` uses the same abstraction for preferences, member data and the
+imports directory. `ImportCommand` and `ExportCommand` use it for their default directories. Recovery backups remain
+beside the configured member-data file, so they are under the same application home. Tests can continue to pass
+explicit temporary import and export directories to the commands, avoiding writes to the repository during unit and
+integration testing.
+
+`ApplicationPathsTest` covers packaged paths containing spaces and non-ASCII characters, the development-launch
+fallback, and confinement of every configured application path under the shared home directory. The packaged-JAR
+manual test below verifies the startup and command paths together from a different working directory.
+
 ### Adding members and record identity
 
 `AddCommandParser` validates the required name, phone, email and status, defaults an omitted type to `student`, and constructs a `Person`. `Name` accepts Unicode letters, combining accents and numbers, ordinary spaces, apostrophes, hyphens and full stops; the first character must be a letter or number. Prefix separators such as `/` remain invalid in names.
@@ -282,11 +301,11 @@ The following sequence diagram traces execution of a parsed `export f/name f/pho
 
 [Open the sequence diagram at full size](images/ExportSequenceDiagram.png). [PlantUML source](diagrams/ExportSequenceDiagram.puml).
 
-The following sequence diagram traces `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra`, using all five supported fields. Parsing creates a `FilterCommand` containing the criteria; executing that command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`.
+The following sequence diagram traces `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra`, using all five supported fields. Parsing creates a `FilterCommand` containing the criteria; executing that command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`, and `p:Predicate` is the `PersonMatchesFilterPredicate` created during execution. The diagram uses `criteria` as shorthand for the five sets passed to the command and predicate constructors.
 
 ![Sequence diagram for filter, showing criteria parsing, predicate creation during execution, filtered-list evaluation, and the result count](images/FilterSequenceDiagram.png)
 
-[Open the sequence diagram at full size](images/FilterSequenceDiagram.png). [PlantUML source](diagrams/FilterSequenceDiagram.puml). The diagram focuses on successful parsing and execution; model snapshots and UI list-change notifications are omitted.
+[Open the sequence diagram at full size](images/FilterSequenceDiagram.png). [PlantUML source](diagrams/FilterSequenceDiagram.puml). The diagram summarizes successful parsing in a reference frame so the execution flow remains readable at the guide's width; model snapshots and UI list-change notifications are omitted.
 
 ### Importing people from CSV
 
@@ -342,15 +361,11 @@ Step 4. The user now decides that adding the person was a mistake, and decides t
 
 </div>
 
-The following sequence diagram shows how an undo operation goes through the `Logic` component:
+The following sequence diagram shows a successful `undo 2` operation through the `Logic` component. The command checks the available history before undoing either step, refreshes the full member list once, and saves once. It returns `false` from `recordsChange()`, so `LogicManager` does not commit a new history state. Model snapshots and save-failure rollback are omitted from the diagram; rollback is described in Step 3 above.
 
 ![UndoSequenceDiagram](images/UndoSequenceDiagram-Logic.png)
 
-<div markdown="span" class="alert alert-info">:information_source: **Note:** The lifeline for `UndoCommand` should end at the destroy marker (X), but due to a limitation of PlantUML, it continues to the end of the diagram.
-
-</div>
-
-Similarly, how an undo operation goes through the `Model` component is shown below:
+The following diagram expands one successful `Model#undoAddressBook()` call. `VersionedAddressBook` checks `canUndo()`, decrements `currentStatePointer`, and restores the snapshot at that index. The Logic diagram repeats this model operation once per requested step; plain `undo` uses a count of 1, as in Step 4.
 
 ![UndoSequenceDiagram](images/UndoSequenceDiagram-Model.png)
 
@@ -795,6 +810,97 @@ Use a disposable directory with only these four records, added in this order:
 1. Close and reopen the app.<br>
    Expected: The remaining records appear in stored directory order, Amy, Bob, alice. Status changes and deletion persist, but sorting does not.
 
+### Exporting current results
+
+Use Java 25 and the released JAR in a disposable writable folder. Remove any existing `exports` folder before this
+scenario so that the expected file numbers are predictable. Run `clear`, then add these records in order:
+
+* `add n/Ben Lee p/90000002 e/ben@example.com s/inactive-alumnus r/Conductor i/Cello:4 g/Orchestra`
+* `add n/Alicia Tan p/90000001 e/alicia@example.com s/member r/=1+1 i/Drums;Percussion:5 g/Band;Choir`
+* `add n/Chloe Lim p/90000003 e/chloe@example.com s/member i/Violin:3 g/Concert Band`
+
+1. Run `sort name`, then `export`.<br>
+   Expected: The displayed order changes from Ben, Alicia, Chloe to Alicia, Ben, Chloe. The feedback reports that
+   three people were exported to the `current-results-01.csv` file in the `exports` folder. The file starts with the
+   header `name,phone,email,status,memberType,role,instruments,groups` and contains Alicia, Ben and Chloe in that
+   displayed order. In a text editor, Alicia's instrument and group cells are written as
+   `"Drums\;Percussion:5"` and `"Band\;Choir"`.
+1. Open the `current-results-01.csv` file in the `exports` folder using Microsoft Excel or another spreadsheet
+   application.<br>
+   Expected: Alicia's role appears as the text `=1+1` rather than the calculated value `2`; no protective prefix is
+   visible. Her semicolon-containing instrument and group names remain in their respective single cells.
+1. Run `filter s/member`, `sort name`, then `export f/phone f/name f/instruments`.<br>
+   Expected: The feedback reports that two people were exported to the `current-results-02.csv` file in the `exports`
+   folder. Its header is exactly `phone,name,instruments`, in that requested order. Its two member rows are
+   `"90000001","Alicia Tan","Drums\;Percussion:5"` and `"90000003","Chloe Lim","Violin:3"`, in displayed name
+   order. Ben is absent, and the command does not change the two displayed results.
+1. Run `find zzznomatch`, then `export f/groups f/name`.<br>
+   Expected: The `current-results-03.csv` file is created in the `exports` folder with only the headers `groups,name`,
+   in that requested order. It has no member rows.
+1. Run `export f/name f/name`, `export f/address`, `export f/` and `export n/Alicia`.<br>
+   Expected: Each command shows the relevant repeated-field, unsupported-field, empty-field or invalid-format error.
+   No export is created, and the `current-results-04.csv` file does not exist in the `exports` folder.
+1. Run `list`, then `export` again.<br>
+   Expected: All three people are exported to the `current-results-04.csv` file in the `exports` folder; the three
+   earlier files remain unchanged, and exporting has not changed any member record.
+1. Run `undo`, then `redo`.<br>
+   Expected: `undo` removes Chloe, the most recent data change before the exports; it does not undo an export. `redo`
+   restores Chloe. The four exported files remain unchanged.
+
+### Importing people from CSV
+
+Use Java 25 and the released JAR in a disposable writable folder. Start HiveMind once so that it creates the `imports`
+folder. Save the following files as CSV UTF-8 in that folder.
+
+Create `sample-members.csv` with:
+
+```csv
+name,phone,email,status,memberType,role,instruments,groups
+"Alicia Tan","91234567","alicia.tan@example.com","member","student"," =1+1","Drums\;Percussion:5;Piano:2","Band\;Choir;Leadership Team"
+"Benjamin Lee","92345678","benjamin.lee@example.com","active-alumnus","teacher","","Cello:12",""
+```
+
+Create `invalid-members.csv` with a valid first member followed by an invalid status:
+
+```csv
+name,phone,email,status,memberType,role,instruments,groups
+"Cara Ng","93456789","cara.ng@example.com","member","student","Librarian","Flute:4","Concert Band"
+"Derek Wong","94567890","derek.wong@example.com","alumnus","student","","Trumpet:3",""
+```
+
+Create `partial-members.csv` with an incompatible partial header:
+
+```csv
+name,phone
+"Evelyn Goh","95678901"
+```
+
+1. Run `clear`, then `add n/Existing Member p/90000000 e/existing@example.com s/member`.<br>
+   Expected: The directory contains only Existing Member.
+1. Run `find Existing`, then `import sample-members.csv`.<br>
+   Expected: The feedback reports that two people were imported from the `sample-members.csv` file in the `imports`
+   folder. The active search is cleared, and the full directory shows Existing Member, Alicia Tan and Benjamin Lee in
+   insertion order. The existing member remains; import adds records rather than replacing the directory.
+1. Inspect the two imported member cards.<br>
+   Expected: Alicia's role is `=1+1`; her instruments are Drums;Percussion with 5 years and Piano with 2 years; her
+   groups are Band;Choir and Leadership Team. Benjamin is an active-alumnus teacher with Cello:12 and no role or
+   groups.
+1. Run `import sample-members.csv` again.<br>
+   Expected: Import fails because `Alicia Tan` at line 2 already exists. No member is added, and all three existing
+   records remain unchanged.
+1. Run `undo`, then `redo`.<br>
+   Expected: `undo` removes Alicia and Benjamin together as one imported change while preserving Existing Member.
+   `redo` restores both imported members. The three CSV files remain unchanged.
+1. Run `import invalid-members.csv`.<br>
+   Expected: The error identifies the invalid status at line 3. Neither Cara nor Derek is added, proving that a file
+   with any invalid row is rejected atomically; the three existing records remain unchanged.
+1. Run `import partial-members.csv`.<br>
+   Expected: Import fails because the header is not
+   `name,phone,email,status,memberType,role,instruments,groups`. No member is added.
+1. Run `import missing.csv`, `import ../sample-members.csv`, `import sample-members.txt` and `import`.<br>
+   Expected: The first command reports that the file is absent. The path-containing name is rejected as an invalid
+   filename, and the final two commands show the import format. The directory remains unchanged.
+
 ### Checking empty member lists
 
 Use Java 25 and the released JAR in a disposable writable folder. These steps clear test data; do not use a real directory.
@@ -850,6 +956,26 @@ Start from the sample data in a disposable directory (delete `data/addressbook.j
 
 Use a disposable folder containing the packaged `HiveMind.jar` for these tests. Open a terminal in that folder and run
 `java -jar HiveMind.jar`. Do not perform these tests using real member data.
+
+1. Resolving the JAR home from another working directory
+
+   1. Create separate disposable `jar-home` and `launch-folder` directories. Include spaces and non-ASCII characters
+      in the `jar-home` path, place only `HiveMind.jar` there, and open a terminal in `launch-folder`.
+
+   1. Put a valid synthetic `data/addressbook.json` containing a uniquely named member in `launch-folder`, then run
+      the JAR using its absolute path.<br>
+      Expected: HiveMind does not load the synthetic member. It creates `preferences.json`, the application log, and
+      the `imports` folder beside `HiveMind.jar`; it does not create or modify application files in `launch-folder`.
+
+   1. Add a synthetic member, place a compatible CSV file in the `imports` folder beside the JAR, run `import` for
+      that file, and run `export`.<br>
+      Expected: Saved member data is written to `jar-home/data/addressbook.json`, the CSV is read from
+      `jar-home/imports`, and the exported file is written to `jar-home/exports`. No application file is written to
+      `launch-folder`.
+
+   1. Close and restart HiveMind using the same absolute JAR path.<br>
+      Expected: The saved and imported members are loaded from `jar-home/data/addressbook.json`. Repeat this scenario
+      on each supported platform available to the team and record any platform that could not be checked.
 
 1. Starting without a data file
 

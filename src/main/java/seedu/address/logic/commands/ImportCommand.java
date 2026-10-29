@@ -8,7 +8,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.List;
 
-import seedu.address.MainApp;
+import seedu.address.commons.core.ApplicationPaths;
 import seedu.address.commons.exceptions.IllegalValueException;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.model.AddressBook;
@@ -36,7 +36,10 @@ public class ImportCommand extends Command {
     public static final String MESSAGE_INVALID_FILENAME = "Invalid filename. Use a valid Windows filename without "
             + "reserved characters, control characters, trailing periods, or reserved names such as CON or COM1.";
 
+    private static final Path DEFAULT_IMPORT_DIRECTORY = ApplicationPaths.getImportDirectory();
+
     private final String fileName;
+    private final Path importDirectory;
 
     /**
      * Creates an ImportCommand to import the specified CSV file.
@@ -45,8 +48,15 @@ public class ImportCommand extends Command {
      * @throws NullPointerException if {@code fileName} is null.
      */
     public ImportCommand(String fileName) {
-        requireNonNull(fileName);
-        this.fileName = fileName;
+        this(fileName, DEFAULT_IMPORT_DIRECTORY);
+    }
+
+    /**
+     * Creates an ImportCommand that reads from the specified directory.
+     */
+    ImportCommand(String fileName, Path importDirectory) {
+        this.fileName = requireNonNull(fileName);
+        this.importDirectory = requireNonNull(importDirectory);
     }
 
     /**
@@ -62,7 +72,7 @@ public class ImportCommand extends Command {
     public CommandResult execute(Model model) throws CommandException {
         requireNonNull(model);
 
-        Path importPath = MainApp.IMPORT_DIRECTORY.resolve(fileName);
+        Path importPath = importDirectory.resolve(fileName);
         List<ImportedPerson> importedPeople;
         try {
             importedPeople = CsvImporter.importPeopleWithLineNumbers(importPath);

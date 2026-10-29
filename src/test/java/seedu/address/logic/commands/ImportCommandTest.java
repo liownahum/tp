@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import seedu.address.model.AddressBook;
 import seedu.address.model.Model;
@@ -22,24 +23,27 @@ import seedu.address.testutil.PersonBuilder;
 
 public class ImportCommandTest {
 
-    private static final Path IMPORT_DIRECTORY = Path.of("imports");
     private static final String FILE_NAME = "import-command-test.csv";
     private static final String MISSING_FILE_NAME = "missing.csv";
-    private static final Path IMPORT_FILE = IMPORT_DIRECTORY.resolve(FILE_NAME);
     private static final String HEADER = "name,phone,email,status,memberType,role,instruments,groups";
 
+    @TempDir
+    public Path temporaryFolder;
+
+    private Path importDirectory;
+    private Path importFile;
     private Model model;
 
     @BeforeEach
     public void setUp() throws IOException {
-        Files.createDirectories(IMPORT_DIRECTORY);
-        Files.deleteIfExists(IMPORT_FILE);
+        importDirectory = Files.createDirectory(temporaryFolder.resolve("imports"));
+        importFile = importDirectory.resolve(FILE_NAME);
         model = new ModelManager(new AddressBook(), new UserPrefs());
     }
 
     @AfterEach
     public void tearDown() throws IOException {
-        Files.deleteIfExists(IMPORT_FILE);
+        Files.deleteIfExists(importFile);
     }
 
     @Test
@@ -61,8 +65,8 @@ public class ImportCommandTest {
         Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
         expectedModel.addPerson(importedPerson);
 
-        assertCommandSuccess(new ImportCommand(FILE_NAME), model,
-                String.format(ImportCommand.MESSAGE_SUCCESS_SINGULAR, 1, IMPORT_FILE), expectedModel);
+        assertCommandSuccess(new ImportCommand(FILE_NAME, importDirectory), model,
+                String.format(ImportCommand.MESSAGE_SUCCESS_SINGULAR, 1, importFile), expectedModel);
     }
 
     @Test
@@ -79,8 +83,8 @@ public class ImportCommandTest {
         expectedModel.addPerson(firstImportedPerson);
         expectedModel.addPerson(secondImportedPerson);
 
-        assertCommandSuccess(new ImportCommand(FILE_NAME), model,
-                String.format(ImportCommand.MESSAGE_SUCCESS, 2, IMPORT_FILE), expectedModel);
+        assertCommandSuccess(new ImportCommand(FILE_NAME, importDirectory), model,
+                String.format(ImportCommand.MESSAGE_SUCCESS, 2, importFile), expectedModel);
     }
 
     @Test
@@ -91,16 +95,16 @@ public class ImportCommandTest {
         writeImportFile(HEADER, "Existing Person,81111111,existing@example.com,member,student,,,");
         String expectedMessage = String.format(ImportCommand.MESSAGE_DUPLICATE_PERSON, "Existing Person", 2);
 
-        assertCommandFailure(new ImportCommand(FILE_NAME), model, expectedMessage);
+        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage);
     }
 
     @Test
     public void execute_missingFile_failureWithHelpfulMessage() {
-        assertCommandFailure(new ImportCommand(MISSING_FILE_NAME), model,
+        assertCommandFailure(new ImportCommand(MISSING_FILE_NAME, importDirectory), model,
                 String.format(ImportCommand.MESSAGE_FILE_NOT_FOUND, MISSING_FILE_NAME));
     }
 
     private void writeImportFile(String... lines) throws IOException {
-        Files.write(IMPORT_FILE, String.join(System.lineSeparator(), lines).getBytes(UTF_8));
+        Files.write(importFile, String.join(System.lineSeparator(), lines).getBytes(UTF_8));
     }
 }

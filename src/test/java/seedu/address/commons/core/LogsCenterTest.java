@@ -3,6 +3,7 @@ package seedu.address.commons.core;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,27 @@ public class LogsCenterTest {
         assertTrue(handlers[0] instanceof FileHandler);
         handlers[0].close();
         logger.removeHandler(handlers[0]);
+    }
+
+    @Test
+    public void addFileHandler_percentInDirectory_writesInsideLiteralDirectory() throws Exception {
+        Path logDirectory = Files.createDirectory(temporaryFolder.resolve("logs %g %u %%"));
+        Logger logger = Logger.getLogger("LogsCenterTest.percentDirectory");
+        logger.setUseParentHandlers(false);
+
+        LogsCenter.addFileHandler(logger, logDirectory.resolve("test.log").toString());
+
+        Handler[] handlers = logger.getHandlers();
+        assertEquals(1, handlers.length);
+        try {
+            logger.info("Synthetic path regression");
+            handlers[0].flush();
+            assertTrue(Files.readString(logDirectory.resolve("test.log.0"))
+                    .contains("Synthetic path regression"));
+        } finally {
+            handlers[0].close();
+            logger.removeHandler(handlers[0]);
+        }
     }
 
     @Test

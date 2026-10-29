@@ -61,6 +61,20 @@ public class CsvImporterTest {
     }
 
     @Test
+    public void importPeople_quotedHeaderWithAndWithoutUtf8ByteOrderMark_importsPerson() throws Exception {
+        String quotedHeader = "\"name\",\"phone\",\"email\",\"status\",\"memberType\",\"role\","
+                + "\"instruments\",\"groups\"";
+        Person expectedPerson = new PersonBuilder().withName("Alice Tan").withPhone("91234567")
+                .withEmail("alice@example.com").withInstruments("Violin:1").build();
+
+        for (String header : List.of(quotedHeader, "\ufeff" + quotedHeader)) {
+            Path csvFile = writeCsv(header, "Alice Tan,91234567,alice@example.com,member,student,,Violin:1,");
+
+            assertEquals(List.of(expectedPerson), CsvImporter.importPeople(csvFile));
+        }
+    }
+
+    @Test
     public void importPeople_headerWithSurroundingWhitespace_importsPerson() throws Exception {
         Path csvFile = writeCsv(
                 " name , phone , email , status , memberType , role , instruments , groups ",

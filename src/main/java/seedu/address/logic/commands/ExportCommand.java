@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import seedu.address.commons.core.ApplicationPaths;
 import seedu.address.commons.core.LogsCenter;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.model.Model;
@@ -36,7 +37,7 @@ public class ExportCommand extends Command {
     public static final String MESSAGE_EXPORT_FAILURE = "Could not export current results to %s. "
             + "Make sure the export location is a writable folder.";
 
-    private static final Path DEFAULT_EXPORT_DIRECTORY = Path.of("exports");
+    private static final Path DEFAULT_EXPORT_DIRECTORY = ApplicationPaths.getExportDirectory();
     private static final Logger logger = LogsCenter.getLogger(ExportCommand.class);
 
     private final Path exportDirectory;

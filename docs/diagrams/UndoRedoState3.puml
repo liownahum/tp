@@ -4,9 +4,9 @@ skinparam ClassFontColor #000000
 skinparam ClassBorderColor #000000
 skinparam ClassBackgroundColor #FFFFAA
 
-title After command "undo"
+title After command "undo" (count = 1)
 
-package States <<rectangle>> {
+package "addressBookStateList" as States {
     class State1 as "<u>ab0:AddressBook</u>"
     class State2 as "<u>ab1:AddressBook</u>"
     class State3 as "<u>ab2:AddressBook</u>"
@@ -15,7 +15,7 @@ package States <<rectangle>> {
 State1 -[hidden]right-> State2
 State2 -[hidden]right-> State3
 
-class Pointer as "Current State" #FFFFFF
+class Pointer as "currentStatePointer = 1" #FFFFFF
 
 Pointer -up-> State2
-@end
+@enduml

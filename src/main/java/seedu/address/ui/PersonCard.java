@@ -2,6 +2,7 @@ package seedu.address.ui;
 
 import java.util.Comparator;
 
+import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
@@ -32,6 +33,8 @@ public class PersonCard extends UiPart<Region> {
 
     @FXML
     private HBox cardPane;
+    @FXML
+    private VBox cardContent;
     @FXML
     private Label name;
     @FXML
@@ -92,6 +95,20 @@ public class PersonCard extends UiPart<Region> {
                 .forEach(group -> addWrappingLabel(groupLabels, group.getName()));
         groups.setVisible(hasGroups);
         groups.setManaged(hasGroups);
+
+        if (isMacOs(System.getProperty("os.name", ""))) {
+            // JavaFX on macOS can calculate this HBox's preferred height using the GridPane's
+            // narrow column preference even after the card has expanded to the list width.
+            // Explicitly track the content's height at the real card width so VirtualFlow does
+            // not cache an oversized cell. Other platforms keep the existing computed sizing.
+            cardPane.prefHeightProperty().bind(Bindings.createDoubleBinding(() ->
+                    cardContent.prefHeight(cardPane.getWidth()), cardPane.widthProperty()));
+        }
+    }
+
+    /** Returns whether the supplied operating-system name identifies macOS. */
+    static boolean isMacOs(String osName) {
+        return osName.startsWith("Mac");
     }
 
     /**

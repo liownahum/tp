@@ -81,6 +81,11 @@ public class CsvImporter {
             throw new IllegalValueException("CSV file is empty.");
         }
 
+        String firstLine = lines.getFirst();
+        if (!firstLine.isEmpty() && firstLine.charAt(0) == UTF_8_BYTE_ORDER_MARK) {
+            lines.set(0, firstLine.substring(1));
+        }
+
         List<CsvRecord> records = combineMultilineRecords(lines);
         validateHeader(records.getFirst().value());
 
@@ -98,15 +103,12 @@ public class CsvImporter {
     }
 
     /**
-     * Validates that the first CSV record contains the expected columns, allowing an optional UTF-8 byte order mark.
+     * Validates that the first CSV record contains the expected columns.
      *
      * @param header CSV record containing the header fields.
      * @throws IllegalValueException if the header is malformed or does not contain the expected columns.
      */
     private static void validateHeader(String header) throws IllegalValueException {
-        if (!header.isEmpty() && header.charAt(0) == UTF_8_BYTE_ORDER_MARK) {
-            header = header.substring(1);
-        }
         List<String> headerFields = parseCsvRecord(header, 1);
         headerFields.replaceAll(String::trim);
         if (!headerFields.equals(EXPECTED_HEADER)) {

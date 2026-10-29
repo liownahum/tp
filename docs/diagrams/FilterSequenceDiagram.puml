@@ -1,62 +1,46 @@
 @startuml
 !include style.puml
 skinparam ArrowFontStyle plain
+skinparam sequenceMessageAlign left
+skinparam sequenceReferenceBackgroundColor #FFFFFF
+skinparam BoxPadding 10
+<style>
+participant {
+    Padding 5
+}
+</style>
 
 box Logic LOGIC_COLOR_T1
 participant ":LogicManager" as LogicManager LOGIC_COLOR
-participant ":AddressBookParser" as AddressBookParser LOGIC_COLOR
-participant ":FilterCommandParser" as FilterCommandParser LOGIC_COLOR
 participant "f:FilterCommand" as FilterCommand LOGIC_COLOR
-participant "r:CommandResult" as CommandResult LOGIC_COLOR
 end box
 
 box Model MODEL_COLOR_T1
-participant "p:PersonMatchesFilterPredicate" as Predicate MODEL_COLOR
 participant "m:Model" as Model MODEL_COLOR
-participant "filteredPersons:FilteredList" as FilteredList MODEL_COLOR
-participant "sortedPersons:SortedList" as SortedList MODEL_COLOR
+participant "filteredPersons:\nFilteredList" as FilteredList MODEL_COLOR
+participant "p:Predicate" as Predicate MODEL_COLOR
+participant "sortedPersons:\nSortedList" as SortedList MODEL_COLOR
 end box
 
-[-> LogicManager : execute("filter s/member i/Violin:3\nty/teacher r/Conductor g/Chamber Orchestra")
+legend top
+Input: filter s/member i/Violin:3
+ty/teacher r/Conductor g/Chamber Orchestra
+criteria = statuses, instrumentCriteria, memberTypes, roles, groups
+endlegend
+
+[-> LogicManager : execute(commandText)
 activate LogicManager
-LogicManager -> AddressBookParser : parseCommand(commandText)
-activate AddressBookParser
-
-create FilterCommandParser
-AddressBookParser -> FilterCommandParser
-activate FilterCommandParser
-FilterCommandParser --> AddressBookParser
-deactivate FilterCommandParser
-
-AddressBookParser -> FilterCommandParser : parse(" s/member i/Violin:3\nty/teacher r/Conductor g/Chamber Orchestra")
-activate FilterCommandParser
-note over FilterCommandParser
-Tokenize repeated prefixes and require a criterion.
-Reject unexpected preamble and contact-field prefixes.
-Validate each value using ParserUtil helpers.
-s/ -> statuses = {MEMBER}
-i/ -> instrumentCriteria = {Violin, minimumYears = 3}
-ty/ -> memberTypes = {TEACHER}
-r/ -> roles = {Conductor}
-g/ -> groups = {Chamber Orchestra}
-Group values use ParserUtil.parseGroups.
-end note
-
-create FilterCommand
-FilterCommandParser -> FilterCommand : new FilterCommand(statuses, instrumentCriteria,\nmemberTypes, roles, groups)
-activate FilterCommand
-FilterCommand --> FilterCommandParser : f
-deactivate FilterCommand
-FilterCommandParser --> AddressBookParser : f
-deactivate FilterCommandParser
-AddressBookParser --> LogicManager : f
-deactivate AddressBookParser
+ref over LogicManager, FilterCommand
+AddressBookParser delegates to
+FilterCommandParser to validate criteria.
+Return the parsed command:
+f = new FilterCommand(criteria).
+end ref
 
 LogicManager -> FilterCommand : execute(m)
 activate FilterCommand
-
 create Predicate
-FilterCommand -> Predicate : new PersonMatchesFilterPredicate(statuses,\ninstrumentCriteria, memberTypes, roles, groups)
+FilterCommand -> Predicate : new PersonMatchesFilterPredicate\n(criteria)
 activate Predicate
 Predicate --> FilterCommand : p
 deactivate Predicate
@@ -68,15 +52,6 @@ activate FilteredList
 loop each person in the full directory
     FilteredList -> Predicate : test(person)
     activate Predicate
-    note right of Predicate
-    OR within each field; AND between fields.
-    Omitted fields impose no restriction.
-    Status and type match selected values.
-    Instruments match whole names and minimum years.
-    Roles match whole names, ignoring case.
-    Groups match whole names, ignoring case
-    and extra whitespace, using Group.equals.
-    end note
     Predicate --> FilteredList : matches
     deactivate Predicate
 end
@@ -85,6 +60,10 @@ deactivate FilteredList
 Model --> FilterCommand
 deactivate Model
 
+note over FilteredList, Predicate
+OR within a field; AND between fields.
+Omitted fields impose no restriction.
+end note
 note over FilteredList, SortedList
 SortedList wraps filteredPersons
 and retains the selected ordering.
@@ -98,18 +77,13 @@ FilterCommand -> SortedList : size()
 activate SortedList
 SortedList --> FilterCommand : count
 deactivate SortedList
-
-create CommandResult
-FilterCommand -> CommandResult : new CommandResult(formatted count message)
-activate CommandResult
-CommandResult --> FilterCommand : r
-deactivate CommandResult
-FilterCommand --> LogicManager : r
+FilterCommand --> LogicManager : new CommandResult(\nformatted count message)
 deactivate FilterCommand
+
 LogicManager -> FilterCommand : requiresSave()
 activate FilterCommand
 FilterCommand --> LogicManager : false
 deactivate FilterCommand
-[<-- LogicManager : r
+[<-- LogicManager : result
 deactivate LogicManager
 @enduml

@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import seedu.address.model.AddressBook;
 import seedu.address.model.Model;
@@ -24,23 +25,26 @@ import seedu.address.testutil.PersonBuilder;
  */
 public class ImportCommandIntegrationTest {
 
-    private static final Path IMPORT_DIRECTORY = Path.of("imports");
     private static final String FILE_NAME = "import-command-integration-test.csv";
-    private static final Path IMPORT_FILE = IMPORT_DIRECTORY.resolve(FILE_NAME);
     private static final String HEADER = "name,phone,email,status,memberType,role,instruments,groups";
 
+    @TempDir
+    public Path temporaryFolder;
+
+    private Path importDirectory;
+    private Path importFile;
     private Model model;
 
     @BeforeEach
     public void setUp() throws IOException {
-        Files.createDirectories(IMPORT_DIRECTORY);
-        Files.deleteIfExists(IMPORT_FILE);
+        importDirectory = Files.createDirectory(temporaryFolder.resolve("imports"));
+        importFile = importDirectory.resolve(FILE_NAME);
         model = new ModelManager(new AddressBook(), new UserPrefs());
     }
 
     @AfterEach
     public void tearDown() throws IOException {
-        Files.deleteIfExists(IMPORT_FILE);
+        Files.deleteIfExists(importFile);
     }
 
     @Test
@@ -66,8 +70,8 @@ public class ImportCommandIntegrationTest {
         expectedModel.addPerson(personWithOptionalFields);
         expectedModel.addPerson(personWithoutOptionalFields);
 
-        assertCommandSuccess(new ImportCommand(FILE_NAME), model,
-                String.format(ImportCommand.MESSAGE_SUCCESS, 2, IMPORT_FILE), expectedModel);
+        assertCommandSuccess(new ImportCommand(FILE_NAME, importDirectory), model,
+                String.format(ImportCommand.MESSAGE_SUCCESS, 2, importFile), expectedModel);
     }
 
     @Test
@@ -83,15 +87,15 @@ public class ImportCommandIntegrationTest {
         Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
         expectedModel.addPerson(importedPerson);
 
-        assertCommandSuccess(new ImportCommand(FILE_NAME), model,
-                String.format(ImportCommand.MESSAGE_SUCCESS_SINGULAR, 1, IMPORT_FILE), expectedModel);
+        assertCommandSuccess(new ImportCommand(FILE_NAME, importDirectory), model,
+                String.format(ImportCommand.MESSAGE_SUCCESS_SINGULAR, 1, importFile), expectedModel);
     }
 
     @Test
     public void execute_rowWithWrongColumnCount_failureIsAtomic() throws IOException {
         writeImportFile(HEADER, "Alice Tan,91234567,alice@example.com,member,student,,Violin:8");
 
-        assertCommandFailure(new ImportCommand(FILE_NAME), model,
+        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model,
                 String.format(ImportCommand.MESSAGE_IMPORT_FAILURE, FILE_NAME, "Expected 8 columns at line 2."));
     }
 
@@ -99,16 +103,18 @@ public class ImportCommandIntegrationTest {
     public void execute_invalidStatus_failureIsAtomic() throws IOException {
         writeImportFile(HEADER, "Alice Tan,91234567,alice@example.com,alumnus,student,,Violin:8,");
 
-        assertCommandFailure(new ImportCommand(FILE_NAME), model, String.format(ImportCommand.MESSAGE_IMPORT_FAILURE,
-                FILE_NAME, "Invalid value at line 2: Status should be member, active-alumnus, or inactive-alumnus"));
+        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model,
+                String.format(ImportCommand.MESSAGE_IMPORT_FAILURE, FILE_NAME,
+                        "Invalid value at line 2: Status should be member, active-alumnus, or inactive-alumnus"));
     }
 
     @Test
     public void execute_invalidMemberType_failureIsAtomic() throws IOException {
         writeImportFile(HEADER, "Alice Tan,91234567,alice@example.com,member,parent,,Violin:8,");
 
-        assertCommandFailure(new ImportCommand(FILE_NAME), model, String.format(ImportCommand.MESSAGE_IMPORT_FAILURE,
-                FILE_NAME, "Invalid value at line 2: Member type should be student or teacher"));
+        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model,
+                String.format(ImportCommand.MESSAGE_IMPORT_FAILURE, FILE_NAME,
+                        "Invalid value at line 2: Member type should be student or teacher"));
     }
 
     @Test
@@ -123,8 +129,8 @@ public class ImportCommandIntegrationTest {
         expected.addPerson(first);
         expected.addPerson(second);
 
-        assertCommandSuccess(new ImportCommand(FILE_NAME), model,
-                String.format(ImportCommand.MESSAGE_SUCCESS, 2, IMPORT_FILE), expected);
+        assertCommandSuccess(new ImportCommand(FILE_NAME, importDirectory), model,
+                String.format(ImportCommand.MESSAGE_SUCCESS, 2, importFile), expected);
     }
 
     @Test
@@ -137,7 +143,7 @@ public class ImportCommandIntegrationTest {
                 "Leader\",,");
         String expectedMessage = String.format(ImportCommand.MESSAGE_DUPLICATE_PERSON, "Existing Person", 2);
 
-        assertCommandFailure(new ImportCommand(FILE_NAME), model, expectedMessage);
+        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage);
     }
 
     @Test
@@ -152,7 +158,7 @@ public class ImportCommandIntegrationTest {
                 "Existing Person,81111111,existing@example.com,member,student,,,");
 
         String expectedMessage = String.format(ImportCommand.MESSAGE_DUPLICATE_PERSON, "Existing Person", 4);
-        assertCommandFailure(new ImportCommand(FILE_NAME), model, expectedMessage);
+        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage);
     }
 
     @Test
@@ -164,10 +170,10 @@ public class ImportCommandIntegrationTest {
 
         String expectedMessage = String.format(ImportCommand.MESSAGE_DUPLICATE_PERSON, "Alice Tan", 3);
 
-        assertCommandFailure(new ImportCommand(FILE_NAME), model, expectedMessage);
+        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage);
     }
 
     private void writeImportFile(String... lines) throws IOException {
-        Files.write(IMPORT_FILE, String.join(System.lineSeparator(), lines).getBytes(UTF_8));
+        Files.write(importFile, String.join(System.lineSeparator(), lines).getBytes(UTF_8));
     }
 }

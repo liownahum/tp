@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import javafx.stage.Stage;
+import seedu.address.commons.core.ApplicationPaths;
 import seedu.address.commons.exceptions.DataLoadingException;
 import seedu.address.logic.LogicManager;
 import seedu.address.logic.commands.exceptions.CommandException;
@@ -95,7 +96,7 @@ public class MainAppTest {
 
     @Test
     public void getImportDirectory_returnsSharedImportDirectory() {
-        assertSame(MainApp.IMPORT_DIRECTORY, new MainApp().getImportDirectory());
+        assertEquals(ApplicationPaths.getImportDirectory(), new MainApp().getImportDirectory());
     }
 
     @Test
