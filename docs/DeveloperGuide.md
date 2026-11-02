@@ -22,6 +22,12 @@ I used OpenAI Codex as a development assistant throughout my work on HiveMind. I
 
 AI-assisted changes were checked through automated tests, code-style checks, packaged-application checks and teammate PR reviews. I remain responsible for the contributions submitted under my name.
 
+#### Irvin Tan Wei Jie (`irtan-cell`)
+
+While working on HiveMind, I used OpenAI Codex to explore possible solutions and help draft or improve code, tests, documentation, and PlantUML diagrams. I also used it when reviewing PRs to check changes against issue requirements and confirm that review comments had been addressed.
+
+I reviewed AI-assisted work and used the relevant tests or checks for each task before accepting it. I remain responsible for all contributions and review decisions submitted under my account.
+
 --------------------------------------------------------------------------------------------------------------------
 
 ## **Setting up, getting started**
