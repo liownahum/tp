@@ -201,6 +201,25 @@ public class MainAppTest {
     }
 
     @Test
+    public void initModelManager_addressBookPathIsDirectory_reportsBackupFailure() throws Exception {
+        Path addressBookPath = Files.createDirectory(temporaryFolder.resolve("addressbook.json"));
+        Files.writeString(addressBookPath.resolve("inside.txt"), "important data");
+        TestMainApp app = new TestMainApp();
+
+        Model model = app.initializeModelManager(createStorageManager(addressBookPath));
+        RecordingUi ui = new RecordingUi();
+        app.ui = ui;
+        app.start(null);
+
+        assertTrue(model.getAddressBook().getPersonList().isEmpty());
+        assertTrue(ui.startupMessage.contains(
+                "A backup could not be created: The address book path is not a regular file."));
+        assertFalse(ui.startupMessage.contains("A backup was created"));
+        assertFalse(Files.exists(addressBookPath.resolveSibling("addressbook.json.bak-01")));
+        assertEquals("important data", Files.readString(addressBookPath.resolve("inside.txt")));
+    }
+
+    @Test
     public void initModelManager_trailingGarbage_recoversWithoutOverwritingData() throws Exception {
         assertTrailingContentTriggersRecovery("trailing-garbage", "\nGARBAGE");
     }

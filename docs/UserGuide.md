@@ -417,7 +417,11 @@ Keep an existing member's `id` unchanged when editing the data file. To create a
 When loading saved data, HiveMind ignores group entries made only of non-breaking spaces, including mixtures with ordinary spaces or tabs. Members and their other details are preserved. Empty group names and names made only of ordinary spaces or tabs make the data file invalid. Loading does not change the file; the next successful command that changes directory data saves it without the ignored group entries.
 
 <div markdown="span" class="alert alert-warning">:exclamation: **Caution:**
-If your changes make the data file invalid, HiveMind starts with an empty directory at the next run, creates a numbered backup alongside it (e.g., `addressbook.json.bak-01`, followed by `addressbook.json.bak-02` if another backup is needed), and prevents directory changes from being saved. Repair or restore the original data file before restarting the app.<br>
+If HiveMind finds `addressbook.json` but cannot load it, HiveMind starts with an empty directory and prevents directory
+changes from being saved. If `addressbook.json` remains a regular file, HiveMind creates a numbered backup
+alongside it (e.g., `addressbook.json.bak-01`, followed by `addressbook.json.bak-02` if another backup is needed). If
+the path is not a regular file, such as when it is a folder, HiveMind reports that a backup could not be created and
+does not create an empty backup folder. Repair or restore the original data file before restarting the app.<br>
 Furthermore, certain edits can cause HiveMind to behave in unexpected ways (e.g., if a value entered is outside of the acceptable range). Therefore, edit the data file only if you are confident that you can update it correctly.
 </div>
 

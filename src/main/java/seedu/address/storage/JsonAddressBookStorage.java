@@ -45,6 +45,9 @@ public class JsonAddressBookStorage {
      * @throws IOException if the address book file cannot be backed up.
      */
     public Path backupAddressBook() throws IOException {
+        if (!Files.isRegularFile(filePath)) {
+            throw new IOException("The address book path is not a regular file.");
+        }
         Optional<Path> newestBackup = findMostRecentlyCreatedBackup();
 
         // Reuse an identical backup to avoid duplicates on repeated failed startups.
