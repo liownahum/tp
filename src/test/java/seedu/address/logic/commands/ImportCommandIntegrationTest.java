@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import seedu.address.logic.Messages;
 import seedu.address.model.AddressBook;
 import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
@@ -135,6 +136,15 @@ public class ImportCommandIntegrationTest {
     }
 
     @Test
+    public void execute_sameCsvTwice_secondImportFailsAtomically() throws Exception {
+        writeImportFile(HEADER, "Alice Tan,91234567,alice@example.com,member,student,,,");
+        new ImportCommand(FILE_NAME, importDirectory).execute(model);
+        String expectedMessage = String.format(ImportCommand.MESSAGE_DUPLICATE_PERSON, "Alice Tan", 2);
+
+        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage);
+    }
+
+    @Test
     public void execute_duplicateExistingPerson_failureIsAtomic() throws IOException {
         Person existingPerson = new PersonBuilder().withName("Existing Person").withPhone("81111111")
                 .withEmail("existing@example.com").withRole("Section Leader").build();
@@ -163,15 +173,43 @@ public class ImportCommandIntegrationTest {
     }
 
     @Test
-    public void execute_duplicatePeopleInCsv_failureIsAtomic() throws IOException {
+    public void execute_duplicatePeopleInCsv_successWithWarning() throws IOException {
+        Person first = new PersonBuilder().withName("Alice Tan").withPhone("91234567")
+                .withEmail("alice@example.com").build();
+        Person second = new PersonBuilder(first).withNewId().build();
         writeImportFile(
                 HEADER,
                 "Alice Tan,91234567,alice@example.com,member,student,,,",
                 "Alice Tan,91234567,alice@example.com,member,student,,,");
+        Model expectedModel = new ModelManager(new AddressBook(), new UserPrefs());
+        expectedModel.addPerson(first);
+        expectedModel.addPerson(second);
+        String expectedMessage = String.format(AddCommand.MESSAGE_POSSIBLE_DUPLICATE, Messages.format(second))
+                + "\n" + String.format(ImportCommand.MESSAGE_SUCCESS, 2, importFile);
 
-        String expectedMessage = String.format(ImportCommand.MESSAGE_DUPLICATE_PERSON, "Alice Tan", 3);
+        assertCommandSuccess(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage, expectedModel);
+    }
 
-        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage);
+    @Test
+    public void execute_defaultExportWithIdenticalPeople_preservesBothRecords() throws Exception {
+        Person first = new PersonBuilder().withName("Alice Tan").withPhone("91234567")
+                .withEmail("alice@example.com").build();
+        Person second = new PersonBuilder(first).withNewId().build();
+        new AddCommand(first).execute(model);
+        new AddCommand(second).execute(model);
+        Path exportDirectory = Files.createDirectory(temporaryFolder.resolve("exports"));
+        Path exportedFile = exportDirectory.resolve("current-results-01.csv");
+        new ExportCommand(exportDirectory).execute(model);
+        Files.copy(exportedFile, importFile);
+        new ClearCommand().execute(model);
+
+        Model expectedModel = new ModelManager(new AddressBook(), new UserPrefs());
+        expectedModel.addPerson(new PersonBuilder(first).withNewId().build());
+        expectedModel.addPerson(new PersonBuilder(second).withNewId().build());
+        String expectedMessage = String.format(AddCommand.MESSAGE_POSSIBLE_DUPLICATE, Messages.format(second))
+                + "\n" + String.format(ImportCommand.MESSAGE_SUCCESS, 2, importFile);
+
+        assertCommandSuccess(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage, expectedModel);
     }
 
     @Test
