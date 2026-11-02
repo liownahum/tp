@@ -819,6 +819,30 @@ Use a disposable directory with only these four records, added in this order:
 1. Close and reopen the app.<br>
    Expected: The remaining records appear in stored directory order, Amy, Bob, alice. Status changes and deletion persist, but sorting does not.
 
+### Filtering members: `filter`
+
+Use Java 25 and the released JAR in a disposable writable folder. Run `clear`, then add these records in order:
+
+* `add n/Alicia Tan p/90000001 e/alicia@example.com s/member ty/teacher r/Conductor i/Violin:3 g/Orchestra`
+* `add n/Ben Lee p/90000002 e/ben@example.com s/active-alumnus ty/teacher r/Conductor i/Cello:5 g/Training`
+* `add n/Chloe Lim p/90000003 e/chloe@example.com s/member ty/teacher r/Conductor i/Violin:2 g/Orchestra`
+* `add n/Daniel Koh p/90000004 e/daniel@example.com s/inactive-alumnus ty/teacher r/Conductor i/Violin:4 g/Orchestra`
+
+1. Run `filter s/member s/active-alumnus i/Violin:3 i/Cello:5 ty/teacher r/Conductor g/Orchestra g/Training`.<br>
+   Expected: Only Alicia and Ben appear, numbered 1 and 2. Repeated statuses, instruments and groups use OR;
+   different fields use AND. Chloe is below the required violin experience; Daniel has an excluded status.
+1. Run `filter i/Violin:3`.<br>
+   Expected: Only Alicia and Daniel appear. The `MIN_YEARS` boundary is inclusive: Alicia's 3 years and Daniel's
+   4 years qualify, while Chloe's 2 years do not. Daniel reappears because this command replaces the previous filter.
+1. Run `filter i/Violin:abc`.<br>
+   Expected: The error is `Minimum years should be a whole number from 0 to 99`. Alicia and Daniel remain displayed,
+   and no member record changes.
+1. Run `filter i/Flute`.<br>
+   Expected: No cards appear, the count reads `Showing 0 of 4 members`, and the list shows
+   `No matching members. Enter list to show everyone.`
+1. Run `list`.<br>
+   Expected: All four original records reappear in insertion order with their details unchanged.
+
 ### Exporting current results
 
 Use Java 25 and the released JAR in a disposable writable folder. Remove any existing `exports` folder before this
