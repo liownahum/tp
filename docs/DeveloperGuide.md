@@ -175,7 +175,7 @@ How the parsing works:
 ### Model component
 **API** : [`Model.java`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/model/Model.java)
 
-<img src="images/ModelClassDiagram.png" width="600" />
+<img src="images/ModelClassDiagram.png" width="770" />
 
 
 The `Model` component,
@@ -190,7 +190,7 @@ The `Model` component,
 
 **API** : [`Storage.java`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/storage/Storage.java)
 
-<img src="images/StorageClassDiagram.png" width="550" />
+<img src="images/StorageClassDiagram.png" width="650" />
 
 The `Storage` component,
 * can save both address book data and user preference data in JSON format, and read them back into corresponding objects.
@@ -368,7 +368,7 @@ Step 2. The user executes `delete 5` command to delete the 5th person in the add
 
 ![UndoRedoState1](images/UndoRedoState1.png)
 
-Step 3. The user executes `add n/David …​` to add a new person. `LogicManager` executes the command and, after a successful save, calls `Model#commitAddressBook()`, causing another modified address book state to be saved into the `addressBookStateList`.
+Step 3. The user executes `add n/David …​` to add a new person. `LogicManager` executes the command and, after a successful save, calls `Model#commitAddressBook(description)`, causing another modified address book state to be saved into the `addressBookStateList`.
 
 ![UndoRedoState2](images/UndoRedoState2.png)
 
@@ -384,9 +384,13 @@ Step 4. The user now decides that adding the person was a mistake, and decides t
 
 </div>
 
-The following sequence diagram shows a successful `undo 2` operation through the `Logic` component. The command checks the available history before undoing either step, refreshes the full member list once, and saves once. It returns `false` from `recordsChange()`, so `LogicManager` does not commit a new history state. Model snapshots and save-failure rollback are omitted from the diagram; rollback is described in Step 3 above.
+The following sequence diagram shows how `undo 2` is parsed into an `UndoCommand`.
 
-![UndoSequenceDiagram](images/UndoSequenceDiagram-Logic.png)
+![Undo command parsing](images/UndoSequenceDiagram-Parsing.png)
+
+The next sequence diagram shows the successful `undo 2` operation through the `Logic` component, with parsing replaced by the `ref` frame. The command checks the available history before undoing either step, refreshes the full member list once, and saves once. It returns `false` from `recordsChange()`, so `LogicManager` does not commit a new history state. Model snapshots and save-failure rollback are omitted from the diagram; rollback is described in Step 3 above.
+
+![Undo command execution](images/UndoSequenceDiagram-Logic.png)
 
 The following diagram expands one successful `Model#undoAddressBook()` call. `VersionedAddressBook` checks `canUndo()`, decrements `currentStatePointer`, and restores the snapshot at that index. The Logic diagram repeats this model operation once per requested step; plain `undo` uses a count of 1, as in Step 4.
 
@@ -400,13 +404,13 @@ Both commands take an optional count, e.g. `undo 3`. `UndoCommandParser` and `Re
 
 </div>
 
-Step 5. The user then decides to execute the command `list`. `list` does not change data, so `LogicManager` returns its result without saving or calling `Model#commitAddressBook()`. Thus, the `addressBookStateList` remains unchanged.
+Step 5. The user then decides to execute the command `list`. `list` does not change data, so `LogicManager` returns its result without saving or calling `Model#commitAddressBook(description)`. Thus, the `addressBookStateList` remains unchanged.
 
 ![UndoRedoState4](images/UndoRedoState4.png)
 
-Step 6. The user executes `clear`. `LogicManager` executes the command and, after a successful save, calls `Model#commitAddressBook()`. Since the `currentStatePointer` is not pointing at the end of the `addressBookStateList`, all address book states after the `currentStatePointer` will be purged. Reason: it no longer makes sense to redo the `add n/David …​` command. This is the behavior that most modern desktop applications follow.
+Step 6. The user executes `clear`. `LogicManager` executes the command and, after a successful save, calls `Model#commitAddressBook(description)`. Since the `currentStatePointer` is not pointing at the end of the `addressBookStateList`, all address book states after the `currentStatePointer` will be purged. Reason: it no longer makes sense to redo the `add n/David …​` command. This is the behavior that most modern desktop applications follow.
 
-<div markdown="span" class="alert alert-info">:information_source: **Note:** The undone states are purged even if the command leaves the data unchanged (e.g. an `edit` that sets a field to its current value), because the user sees it reported as a new change. The undone states are kept only after commands that do not save data (e.g. `list`, as in Step 5) and after `undo` and `redo` themselves, which override `Command#recordsChange()` to return `false` so that `LogicManager` does not call `Model#commitAddressBook()` after them.
+<div markdown="span" class="alert alert-info">:information_source: **Note:** The undone states are purged even if the command leaves the data unchanged (e.g. an `edit` that sets a field to its current value), because the user sees it reported as a new change. The undone states are kept only after commands that do not save data (e.g. `list`, as in Step 5) and after `undo` and `redo` themselves, which override `Command#recordsChange()` to return `false` so that `LogicManager` does not call `Model#commitAddressBook(description)` after them.
 
 </div>
 
@@ -434,7 +438,7 @@ The following activity diagram summarizes what happens when a user executes a ne
   * Pros: Failed saves never enter the history; new data-changing commands are undoable without extra code.
   * Cons: Relies on `commit()` comparing states to skip unchanged data. The comparison uses `AddressBook#hasIdenticalData`, not `equals`, because `Instrument` and `Group` equality ignores case, which would hide a capitalisation-only edit. It also relies on `undo` and `redo` opting out through `Command#recordsChange()`.
 
-* **Alternative 2:** Each data-changing command calls `Model#commitAddressBook()` (the original AB3 proposal).
+* **Alternative 2:** Each data-changing command calls `Model#commitAddressBook(description)` (the original AB3 proposal).
   * Pros: Explicit.
   * Cons: Easy to forget in new commands; a change is recorded even if saving it fails.
 
@@ -665,7 +669,7 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 * **Mainstream OS**: Windows, Linux, Unix, or macOS.
 * **Member**: A person who currently belongs to the CCA. In HiveMind, _member_ is also used loosely to mean any person in the directory, including alumni and teachers.
 * **Participation group**: A group of members formed for a particular piece, activity or training programme (e.g., a group of new members under training).
-* **Possible duplicate**: A person being added whose name or phone number matches that of an existing record. HiveMind warns the user but still adds the person, since two different people can share a name or a phone number.
+* **Possible duplicate**: A person being added or edited whose name or phone number matches that of an existing record. HiveMind warns the user but still adds or edits the person, since two different people can share a name or a phone number.
 * **Prefix**: The short label before a parameter in a command (e.g., `n/` in `n/Tan Wei Ming`) that tells HiveMind which field the value belongs to.
 * **Role**: A position a person holds in the CCA (e.g., Section Leader, Conductor). Roles are free text, since each CCA names its roles differently.
 * **Status**: Whether a person is a _member_, an _active alumnus_ or an _inactive alumnus_ of the CCA.

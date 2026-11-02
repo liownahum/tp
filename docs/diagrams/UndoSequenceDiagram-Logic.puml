@@ -11,8 +11,6 @@ participant {
 
 box Logic LOGIC_COLOR_T1
 participant ":LogicManager" as LogicManager LOGIC_COLOR
-participant ":AddressBook\nParser" as AddressBookParser LOGIC_COLOR
-participant ":UndoCommand\nParser" as UndoCommandParser LOGIC_COLOR
 participant "u:UndoCommand" as UndoCommand LOGIC_COLOR
 end box
 
@@ -24,25 +22,11 @@ box Storage STORAGE_COLOR_T1
 participant ":Storage" as Storage STORAGE_COLOR
 end box
 
-[-> LogicManager : execute("undo 2")
+[-> LogicManager : execute("undo 2")<U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0>
 activate LogicManager
-LogicManager -> AddressBookParser : parseCommand("undo 2")
-activate AddressBookParser
-create UndoCommandParser
-AddressBookParser -> UndoCommandParser
-AddressBookParser -> UndoCommandParser : parse(" 2")
-activate UndoCommandParser
-note over UndoCommandParser
-parseCount(" 2") = 2
-Default count = 1.
-end note
-create UndoCommand
-UndoCommandParser -> UndoCommand : new UndoCommand(2)
-UndoCommandParser <-- UndoCommand : u
-UndoCommandParser --> AddressBookParser : u
-deactivate UndoCommandParser
-AddressBookParser --> LogicManager : u
-deactivate AddressBookParser
+ref over LogicManager, UndoCommand
+Parse "undo 2" into u
+end ref
 
 LogicManager -> UndoCommand : execute(m)
 activate UndoCommand
@@ -50,7 +34,7 @@ UndoCommand -> Model : getUndoableChangeCount()
 activate Model
 Model --> UndoCommand : undoableCount
 deactivate Model
-note over UndoCommand, Model
+note over LogicManager, UndoCommand
 count <= undoableCount
 or fail before any undo.
 end note
@@ -60,7 +44,7 @@ loop count times (2 in this example)
     Model --> UndoCommand : description
     deactivate Model
 end
-UndoCommand -> Model : updateFilteredPersonList(\nPREDICATE_SHOW_ALL_PERSONS)
+UndoCommand -> Model : updateFilteredPersonList(...)
 activate Model
 Model --> UndoCommand
 deactivate Model
