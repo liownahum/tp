@@ -9,7 +9,10 @@ title: Developer Guide
 
 ## **Acknowledgements**
 
-* _{List the sources of reused or adapted ideas, code, documentation, and third-party libraries here, with links to the originals.}_
+* HiveMind adapts [AddressBook-Level3](https://github.com/se-edu/addressbook-level3), created by the [SE-EDU initiative](https://se-education.org). Its application architecture, command/parser/model/storage/UI foundations, initial build and test setup, and original guide content and diagrams have been extended for music CCA member management.
+* The inherited JavaFX implementation includes adaptations of [Marco Jakob's JavaFX tutorial](https://code.makery.ch/library/javafx-tutorial/). Original image credits are recorded in [`copyright.txt`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/copyright.txt).
+* Runtime libraries: [JavaFX](https://openjfx.io/) for the interface and [Jackson](https://github.com/FasterXML/jackson) for JSON persistence. Tests use [JUnit 5](https://junit.org/junit5/).
+* Build, analysis and documentation tools include [Gradle](https://gradle.org/), [Shadow](https://gradleup.com/shadow/), [Checkstyle](https://checkstyle.org/), [JaCoCo](https://www.jacoco.org/), and [PlantUML](https://plantuml.com/). The website uses [Jekyll](https://jekyllrb.com/) with the [Minima theme](https://github.com/jekyll/minima).
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -156,7 +159,7 @@ The parser class diagram below uses `add` as one example of how HiveMind parses 
 <img src="images/ParserClasses.png" width="850"/>
 
 How the parsing works:
-* `AddressBookParser` creates an `AddCommandParser` for `add`. The parser tokenizes prefixes into an `ArgumentMultimap` and checks that `n/`, `p/`, `e/`, and `s/` are present.
+* `AddressBookParser` creates an `AddCommandParser` for `add`. The parser checks for unsupported prefixes with `ArgumentTokenizer.verifyNoUnknownPrefixes`, tokenizes prefixes into an `ArgumentMultimap` and checks that `n/`, `p/`, `e/`, and `s/` are present. Unsupported or wrong-case prefixes in the preamble are named in the error; ambiguous slash-containing text within values remains text, following the same rules as `edit` and `filter`.
 * `ParserUtil` validates the status, member type, optional role, instruments, and participation groups. When `ty/` is omitted, `AddCommandParser` uses `student`; when `r/` is omitted, the person's role is empty. Repeated `g/` prefixes add groups to the person's group set.
 * `AddCommandParser` creates a `Person` from the parsed values, then an `AddCommand` containing that person. `AddressBookParser` returns it as a `Command` to `LogicManager`.
 * Other command parsers follow the same `Parser` interface, although their accepted prefixes and validation rules differ.
@@ -186,7 +189,7 @@ The `Storage` component,
 * is implemented by `StorageManager`, which delegates the actual JSON file access to `JsonAddressBookStorage` and `JsonUserPrefsStorage` (one class per data file).
 * depends on some classes in the `Model` component (because the `Storage` component's job is to save/retrieve objects that belong to the `Model`)
 
-`JsonAdaptedPerson` rejects null group entries and names for which `String.isBlank()` returns true. For each remaining entry, it skips the membership if `Group.isValidName()` returns false. This omits Unicode-whitespace-only names such as `"\u00A0"` while preserving the person and valid groups. Valid names are constructed as `Group` objects, which replace runs of Unicode whitespace with one ordinary space and trim the result.
+`JsonAdaptedPerson` rejects null group entries and names for which `String.isBlank()` returns true. For each remaining entry, it skips the membership if `Group.isValidName()` returns false. This omits names made only of Unicode whitespace or invisible formatting characters, such as `"\u00A0"` or `"\u200B"`, while preserving the person and valid groups. Valid names are constructed as `Group` objects, which remove Unicode format characters (`\p{Cf}`), replace runs of Unicode whitespace with one ordinary space and trim the result.
 
 `JsonAdaptedPerson` also skips instrument entries whose names are not blank according to `String.isBlank()` but normalize to empty. Remaining instrument names are compared ignoring case and normalized Unicode whitespace. If old entries collapse to the same instrument name, the loader keeps the highest years of experience. These migrations preserve the member's record ID and other fields; loading does not rewrite the file.
 
@@ -239,9 +242,9 @@ Each `Person` has a stable UUID record ID, independent of editable contact detai
 
 ### Participation groups
 
-`Group` stores a non-blank name and normalizes whitespace before comparing names ignoring case. `ParserUtil.parseGroups` builds a set, so repeating `g/Choir g/choir` records one group. `add` may omit all groups. `edit` preserves groups unless `g/` is supplied; named groups replace the entire set, and a single empty `g/` clears it. An empty value mixed with named groups is rejected.
+`Group` removes invisible Unicode format characters (`\p{Cf}`) and normalizes whitespace before rejecting blank names and comparing names ignoring case. `Role.normalize` removes the same format characters before collapsing Unicode whitespace; stored role equality remains case-sensitive. `ParserUtil.parseGroups` builds a set, so repeating `g/Choir g/choir` records one group. `add` may omit all groups. `edit` preserves groups unless `g/` is supplied; named groups replace the entire set, and a single empty `g/` clears it. An empty value mixed with named groups is rejected.
 
-For older JSON files, `JsonAdaptedPerson` omits a Unicode-space-only group that earlier versions accepted, preserving the member and its remaining groups. New commands still reject such blank group names; null and previously invalid blank JSON group entries remain invalid data.
+For older JSON files, `JsonAdaptedPerson` omits groups and roles made only of Unicode spaces or invisible format characters that earlier versions accepted, preserving the member, record ID and remaining valid values. Group names that become equal after normalization are stored once. New commands still reject such blank values; null group entries and previously invalid blank JSON values remain invalid data.
 
 `Person` keeps a defensive copy of its group set and exposes an unmodifiable view. JSON saves group names and defaults a missing groups field to an empty set for older files. `PersonCard` renders sorted group names as separate, wrapping labels below a `Groups:` heading. The whole section is hidden and unmanaged when empty. This keeps a group containing a comma distinguishable from multiple groups. Instrument and group badges are constrained to their flow pane's width, and list cells follow the viewport width so long values wrap within the card.
 

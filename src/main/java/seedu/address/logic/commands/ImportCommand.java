@@ -35,7 +35,7 @@ public class ImportCommand extends Command {
     public static final String MESSAGE_IMPORT_FAILURE = "Could not import %s: %s";
     public static final String MESSAGE_FILE_NOT_FOUND = "No file named %s in the imports folder.";
     public static final String MESSAGE_DUPLICATE_PERSON = "Import failed because \"%s\" at line %d already exists "
-            + "in the address book.";
+            + "in the directory.";
     public static final String MESSAGE_INVALID_FILENAME = "Invalid filename. Use a filename without "
             + "reserved characters, control characters, trailing periods, or reserved names such as CON or COM1.";
 

@@ -10,11 +10,38 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+/** Verifies group validation and the comparison rules used by membership sets and filters. */
 public class GroupTest {
 
     private static final List<String> UNICODE_WHITESPACE = List.of(
             "\u0085", "\u00a0", "\u1680", "\u2000", "\u2001", "\u2002", "\u2003", "\u2004", "\u2005", "\u2006",
             "\u2007", "\u2008", "\u2009", "\u200a", "\u2028", "\u2029", "\u202f", "\u205f", "\u3000");
+
+    private static final List<String> FORMAT_CHARACTERS = List.of(
+            "\u200b", "\u200c", "\u200d", "\u2060", "\ufeff", "\udb40\udc01");
+
+    @Test
+    public void constructor_invisibleOnlyName_rejectsBlankGroup() {
+        for (String invisible : FORMAT_CHARACTERS) {
+            assertFalse(Group.isValidName(" " + invisible + "\u00a0"));
+            assertThrows(IllegalArgumentException.class, Group.MESSAGE_CONSTRAINTS, ()
+                -> new Group(" " + invisible + "\u00a0"));
+        }
+    }
+
+    @Test
+    public void equals_invisibleCharacters_normalizesAndDeduplicates() {
+        Group expected = new Group("Jazz Band");
+        for (String invisible : FORMAT_CHARACTERS) {
+            String pastedName = "Ja" + invisible + "zz\u00a0" + invisible + " Band";
+            Group actual = new Group(pastedName);
+            assertEquals("Jazz Band", actual.getName());
+            assertTrue(expected.hasName(pastedName));
+            assertEquals(expected, actual);
+            assertEquals(expected.hashCode(), actual.hashCode());
+            assertEquals(1, new HashSet<>(List.of(expected, actual)).size());
+        }
+    }
 
     @Test
     public void constructor_blankName_throwsIllegalArgumentException() {
