@@ -157,19 +157,22 @@ Here's a (partial) class diagram of the `Logic` component:
 
 <img src="images/LogicClassDiagram.png" width="550"/>
 
-The sequence diagram below illustrates the interactions within the `Logic` component, taking `execute("delete 1")` API call as an example.
+The following two sequence diagrams illustrate the interactions within the `Logic` component for a successful `execute("delete 1")` call. Parsing and execution are shown separately so that both remain readable at the guide's width.
 
-![Interactions Inside the Logic Component for the `delete 1` Command](images/DeleteSequenceDiagram.png)
+First, `AddressBookParser` creates a `DeleteCommandParser`, which parses the displayed index and returns `d:DeleteCommand`.
 
-<div markdown="span" class="alert alert-info">:information_source: **Note:** The lifeline for `DeleteCommandParser` should end at the destroy marker (X), but due to a limitation of PlantUML, it continues to the end of the diagram.
-</div>
+![Delete command parsing: parser and command creation](images/DeleteParsingSequenceDiagram.png)
+
+Execution then continues in `LogicManager`; the `ref` frame refers to the parsing interactions shown above. `DeleteCommand` resolves displayed index `1` against the current filtered and sorted list, then passes the selected `Person` to `Model#deletePerson` and returns a `CommandResult`. `LogicManager`'s generic snapshot, save, rollback, and history-commit interactions are omitted from this simplified view.
+
+![Delete command execution: displayed-index lookup, deletion, and result creation](images/DeleteSequenceDiagram.png)
 
 How the `Logic` component works:
 
 1. When `Logic` is called upon to execute a command, the command is passed to an `AddressBookParser` object, which in turn creates a parser that matches the command (e.g., `DeleteCommandParser`) and uses it to parse the command.
 1. This results in a `Command` object (more precisely, an object of one of its subclasses e.g., `DeleteCommand`) which is executed by the `LogicManager`.
 1. The command can communicate with the `Model` when it is executed (e.g. to delete a person).<br>
-   Note that although this is shown as a single step in the diagram above for simplicity, the code can require several interactions between the command object and the `Model` to complete the operation.
+   The execution diagram shows the delete-specific interactions; other commands can require different or additional interactions with the `Model`.
 1. The result of the command execution is encapsulated as a `CommandResult` object which is returned from `Logic`.
 
 The parser class diagram below uses `add` as one example of how HiveMind parses commands. It focuses on the Logic parser classes; the member fields are described in the text below rather than drawing the Model classes here:

@@ -1,0 +1,40 @@
+@startuml
+!include style.puml
+skinparam ArrowFontStyle plain
+skinparam sequenceMessageAlign left
+skinparam BoxPadding 10
+
+' Padding keeps the incoming call label inside the Logic box.
+box Logic LOGIC_COLOR_T1
+participant "            :AddressBookParser            " as AddressBookParser LOGIC_COLOR
+participant ":DeleteCommand\nParser" as DeleteCommandParser LOGIC_COLOR
+participant "d:DeleteCommand" as DeleteCommand LOGIC_COLOR
+end box
+
+[-> AddressBookParser : parseCommand(\n"delete 1")
+activate AddressBookParser
+
+create DeleteCommandParser
+AddressBookParser -> DeleteCommandParser
+activate DeleteCommandParser
+DeleteCommandParser --> AddressBookParser
+deactivate DeleteCommandParser
+
+AddressBookParser -> DeleteCommandParser : parse(" 1")
+activate DeleteCommandParser
+note over DeleteCommandParser
+parseIndex(" 1") = Index 1
+end note
+
+create DeleteCommand
+DeleteCommandParser -> DeleteCommand : new DeleteCommand\n(index)
+activate DeleteCommand
+DeleteCommand --> DeleteCommandParser : d
+deactivate DeleteCommand
+
+DeleteCommandParser --> AddressBookParser : d
+deactivate DeleteCommandParser
+[<-- AddressBookParser : d
+deactivate AddressBookParser
+
+@enduml
