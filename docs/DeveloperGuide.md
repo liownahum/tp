@@ -688,7 +688,18 @@ testers are expected to do more *exploratory* testing.
    1. Resize the window to an optimal size. Move the window to a different location. Close the window.
 
    1. Relaunch the app by double-clicking the JAR file.<br>
-       Expected: The most recent window size and location are retained.
+       Expected: The most recent window size and location are retained when they fit the current display's usable area. Otherwise, the window is resized and moved within that area.
+
+1. Restoring preferences after a display change
+
+   1. Set the display to 1280 × 720 at 150% scaling and launch HiveMind.<br>
+      Expected: The entire window fits within the usable screen area. The command box, feedback, member list and status bar remain visible. The window can be resized down to 450 × 400 logical pixels.
+
+   1. Close HiveMind after moving it to a secondary monitor. Disconnect that monitor and relaunch.<br>
+      Expected: The window returns to the primary display and fits its usable area.
+
+   1. With a secondary monitor connected, move HiveMind fully onto it, close and relaunch.<br>
+      Expected: A size and position that still fit are retained, including on monitors positioned to the left of the primary display.
 
 1. _{ more test cases …​ }_
 
@@ -699,7 +710,7 @@ Use Java 25 and the released JAR in a fresh, disposable writable folder. Keep th
 1. Before entering a command, check that the feedback label is the neutral `Information` label.
 1. Run `list`.<br>
    Expected: A green `Success` label accompanies `Listed all persons.`
-1. Run `add` without parameters, then resize the window to its minimum 450 × 600.<br>
+1. Run `add` without parameters, then resize the window to its minimum 450 × 400.<br>
    Expected: A red `Error` label accompanies the invalid-format message and add usage. The text wraps within the feedback box; scroll vertically to read the complete usage. Select the text and check that it can be copied. No member is added.
 1. Run `list` again.<br>
    Expected: The label returns to green `Success`, the previous error is replaced, and the new feedback starts at the top of the box. The same sample records remain visible.
@@ -771,7 +782,7 @@ Use a disposable directory for these checks so the test records do not affect yo
    Expected: The name remains prominent and the membership badges remain readable without relying on colour. Text wraps without overlapping other fields, instrument labels flow onto additional rows, and all recorded details remain accessible. Check both full and empty optional fields again after scrolling.
 1. Run `add n/Test Member p/91234567 e/thisisaverylongemailaddressusedtotestoverflowinaction@example.com s/member r/percussion-section-leader-with-a-very-long-title`. Narrow the member list to about 350 pixels, then hover over the email and role in turn.<br>
    Expected: Each tooltip shows the complete field text, including the full email domain and the end of the role. Resize the window wider and narrower and repeat; the tooltips still show the full values. A member without a role still has no role row.
-1. Run `add n/Card Width p/91234567 e/music.coordinator.long.contact.address@example.com s/member r/Student Coordinator for the University Chamber Orchestra i/Historical Keyboard and String Instrument Ensemble Performance Specialisation:12 g/University Chamber Orchestra Alumni and Student Combined Performance Group`. Resize the window to its minimum 450 × 600, then widen and narrow it again.<br>
+1. Run `add n/Card Width p/91234567 e/music.coordinator.long.contact.address@example.com s/member r/Student Coordinator for the University Chamber Orchestra i/Historical Keyboard and String Instrument Ensemble Performance Specialisation:12 g/University Chamber Orchestra Alumni and Student Combined Performance Group`. Resize the window to its minimum 450 × 400, then widen and narrow it again.<br>
    Expected: The full instrument name and `12 yrs` remain readable on wrapped lines, as does the group name. Neither badge pushes contact details or other card content beyond the visible right edge. Scroll vertically if the card is taller than the available area.
 
 ### Checking persistent member counts
@@ -788,7 +799,7 @@ Use Java 25 and the released JAR in a disposable writable folder. These steps cl
    Expected: An error is shown, and the count remains `Showing 0 of 2 members`.
 1. Run `list`, `delete 1`, `undo`, then `redo`.<br>
    Expected: The counts are `Showing 2 of 2 members`, `Showing 1 of 1 member`, `Showing 2 of 2 members`, and `Showing 1 of 1 member` respectively.
-1. Resize the window to its minimum 450 × 600.<br>
+1. Resize the window to its minimum 450 × 400.<br>
    Expected: The count remains readable above the member list, independently of the last command's feedback.
 
 ### Sorting displayed members
@@ -942,7 +953,7 @@ Use Java 25 and the released JAR in a disposable writable folder. These steps cl
    Expected: The list area starts with `No members yet.` and offers `add` and `help` guidance.
 1. Run `add n/Alice p/11111 e/alice@example.com s/member`.<br>
    Expected: Alice's card replaces the empty-directory guidance.
-1. Run `find Nobody`, then resize the window to its minimum 450 × 600.<br>
+1. Run `find Nobody`, then resize the window to its minimum 450 × 400.<br>
    Expected: The list area says `No matching members. Enter list to show everyone.` The entire message remains readable on wrapped lines, without a card being shown.
 1. Run `list`, then `filter s/inactive-alumnus`.<br>
    Expected: `list` restores Alice and hides the guidance; the filter shows the no-matching-members guidance again.
