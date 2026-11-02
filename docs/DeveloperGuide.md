@@ -700,17 +700,17 @@ testers are expected to do more *exploratory* testing.
 
 1. Initial launch
 
-   1. Download the JAR file and copy it into an empty folder.
+   1. Download the released `HiveMind.jar` and copy it into an empty writable folder.
 
-   1. Double-click the JAR file.<br>
+   1. Open a terminal in that folder and run `java -jar HiveMind.jar`.<br>
       Expected: The GUI opens with a set of sample contacts. The window size may not be optimal.
 
 1. Saving window preferences
 
    1. Resize the window to an optimal size. Move the window to a different location. Close the window.
 
-   1. Relaunch the app by double-clicking the JAR file.<br>
-       Expected: The most recent window size and location are retained when they fit the current display's usable area. Otherwise, the window is resized and moved within that area.
+   1. From a terminal in the same folder, run `java -jar HiveMind.jar` again.<br>
+      Expected: The most recent window size and location are retained when they fit the current display's usable area. Otherwise, the window is resized and moved within that area.
 
 1. Restoring preferences after a display change
 
@@ -722,8 +722,6 @@ testers are expected to do more *exploratory* testing.
 
    1. With a secondary monitor connected, move HiveMind fully onto it, close and relaunch.<br>
       Expected: A size and position that still fit are retained, including on monitors positioned to the left of the primary display.
-
-1. _{ more test cases …​ }_
 
 ### Checking command feedback
 
@@ -1024,8 +1022,6 @@ Use a disposable directory for these checks, as they clear test data. Start with
 
    1. Other incorrect delete commands to try: `delete`, `delete x`, `...` (where x is larger than the list size)<br>
       Expected: Similar to previous.
-
-1. _{ more test cases …​ }_
 
 ### Undoing and redoing changes
 
