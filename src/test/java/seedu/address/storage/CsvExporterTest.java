@@ -44,6 +44,7 @@ public class CsvExporterTest {
                 "\"Daniel Meier\",\"87652533\",\"cornelia@example.com\","
                         + "\"member\",\"teacher\",\"Conductor\",\"Violin:20\",\"\""),
                 Files.readString(outputPath));
+        assertFalse(Files.exists(testFolder.resolve(".current-results-01.csv.reserve")));
     }
 
     @Test
@@ -106,6 +107,18 @@ public class CsvExporterTest {
 
         assertEquals(secondExport, returnedPath);
         assertEquals("existing export", Files.readString(firstExport));
+    }
+
+    @Test
+    public void export_existingReservation_preservesReservationAndUsesNextNumber() throws Exception {
+        Path firstReservation = testFolder.resolve(".current-results-01.csv.reserve");
+        Files.createFile(firstReservation);
+
+        Path returnedPath = CsvExporter.export(List.of(DANIEL), testFolder);
+
+        assertEquals(testFolder.resolve("current-results-02.csv"), returnedPath);
+        assertTrue(Files.exists(firstReservation));
+        assertFalse(Files.exists(testFolder.resolve(".current-results-02.csv.reserve")));
     }
 
     @Test

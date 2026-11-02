@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
@@ -96,20 +97,24 @@ public class CsvExporter {
         while (true) {
             Path outputPath = exportDirectory.resolve(
                     String.format("current-results-%02d.csv", exportNumber));
+            Path reservationPath = exportDirectory.resolve(
+                    String.format(".current-results-%02d.csv.reserve", exportNumber));
 
             try {
-                Files.createFile(outputPath);
+                Files.createFile(reservationPath);
             } catch (FileAlreadyExistsException e) {
                 exportNumber++;
                 continue;
             }
 
             try {
-                return Files.move(temporaryPath, outputPath,
-                        StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                Files.deleteIfExists(outputPath);
-                throw e;
+                if (Files.exists(outputPath, LinkOption.NOFOLLOW_LINKS)) {
+                    exportNumber++;
+                    continue;
+                }
+                return Files.move(temporaryPath, outputPath, StandardCopyOption.ATOMIC_MOVE);
+            } finally {
+                Files.deleteIfExists(reservationPath);
             }
         }
     }
