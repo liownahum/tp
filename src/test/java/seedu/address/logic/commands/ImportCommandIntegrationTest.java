@@ -1,6 +1,7 @@
 package seedu.address.logic.commands;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static seedu.address.logic.commands.CommandTestUtil.assertCommandFailure;
 import static seedu.address.logic.commands.CommandTestUtil.assertCommandSuccess;
 
@@ -173,7 +174,49 @@ public class ImportCommandIntegrationTest {
         assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage);
     }
 
+    @Test
+    public void execute_importFileIsSymbolicLinkOutsideImportDirectory_failureIsAtomic() throws IOException {
+        Path outsideFile = temporaryFolder.resolve("outside.csv");
+        Files.writeString(outsideFile, HEADER);
+        createSymbolicLinkOrSkip(importFile, outsideFile);
+
+        String expectedMessage = String.format(ImportCommand.MESSAGE_IMPORT_FAILURE, FILE_NAME,
+                "Symbolic links are not allowed.");
+        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage);
+    }
+
+    @Test
+    public void execute_importFileIsSymbolicLinkInsideImportDirectory_failureIsAtomic() throws IOException {
+        Path actualFile = importDirectory.resolve("actual.csv");
+        Files.writeString(actualFile, HEADER);
+        createSymbolicLinkOrSkip(importFile, actualFile);
+
+        String expectedMessage = String.format(ImportCommand.MESSAGE_IMPORT_FAILURE, FILE_NAME,
+                "Symbolic links are not allowed.");
+        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage);
+    }
+
+    @Test
+    public void execute_importDirectoryIsSymbolicLink_failureIsAtomic() throws IOException {
+        Path outsideDirectory = Files.createDirectory(temporaryFolder.resolve("outside"));
+        Files.writeString(outsideDirectory.resolve(FILE_NAME), HEADER);
+        Files.delete(importDirectory);
+        createSymbolicLinkOrSkip(importDirectory, outsideDirectory);
+
+        String expectedMessage = String.format(ImportCommand.MESSAGE_IMPORT_FAILURE, FILE_NAME,
+                "Symbolic links are not allowed.");
+        assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage);
+    }
+
     private void writeImportFile(String... lines) throws IOException {
         Files.write(importFile, String.join(System.lineSeparator(), lines).getBytes(UTF_8));
+    }
+
+    private void createSymbolicLinkOrSkip(Path link, Path target) {
+        try {
+            Files.createSymbolicLink(link, target);
+        } catch (UnsupportedOperationException | IOException exception) {
+            assumeTrue(false, "Symbolic links are unavailable: " + exception.getMessage());
+        }
     }
 }

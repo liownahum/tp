@@ -49,6 +49,9 @@ public class CsvExporter {
             throw new IllegalArgumentException("Select at least one export field without repetitions.");
         }
 
+        if (Files.isSymbolicLink(exportDirectory)) {
+            throw new IOException("The export location must not be a symbolic link.");
+        }
         Path outputPath = getNextAvailablePath(exportDirectory);
         String csvContent = buildCsvContent(people, selectedFields);
 
