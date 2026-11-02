@@ -3,6 +3,7 @@ package seedu.address.ui;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -83,21 +84,22 @@ public class PersonCardTest {
             String email = "thisisaverylongemailaddressusedtotestoverflowinaction@example.com";
             String role = "percussion-section-leader-with-a-very-long-title";
             Person person = new PersonBuilder().withEmail(email).withRole(role).build();
-            PersonCard card = new PersonCard(person, 1);
-            Region root = card.getRoot();
-            new Scene(root, 350, 600);
+            Region root = new PersonListPanel(FXCollections.observableArrayList(person)).getRoot();
+            Scene scene = new Scene(root, 350, 600);
+            scene.getStylesheets().add(getClass().getResource("/view/DarkTheme.css").toExternalForm());
 
             for (int width : new int[] {350, 800, 350}) {
                 root.resize(width, 600);
                 root.applyCss();
                 root.layout();
-                assertFullTextTooltip(label(card, "email"), email);
-                assertFullTextTooltip(label(card, "role"), "Role: " + role);
+                assertFullTextTooltip((Label) root.lookup("#email"), email);
+                assertFullTextTooltip((Label) root.lookup("#role"), "Role: " + role);
             }
         });
     }
 
     private static void assertFullTextTooltip(Label label, String expectedText) {
+        assertNotNull(label);
         assertNotNull(label.getTooltip(), "Full details must remain accessible when the label is clipped");
         assertEquals(expectedText, label.getTooltip().getText());
         assertTrue(label.getTooltip().isWrapText(), "Long tooltip text must wrap within the screen");
@@ -111,6 +113,7 @@ public class PersonCardTest {
             PersonCard card = new PersonCard(new PersonBuilder().build(), 1);
 
             assertEquals("", label(card, "role").getText());
+            assertNull(label(card, "role").getTooltip());
             assertFalse(label(card, "role").isVisible());
             assertFalse(label(card, "role").isManaged());
             FlowPane instruments = (FlowPane) card.getRoot().lookup("#instruments");
