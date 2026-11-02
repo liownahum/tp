@@ -3,8 +3,10 @@ package seedu.address.storage;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -52,19 +54,16 @@ public class CsvExporter {
         if (Files.isSymbolicLink(exportDirectory)) {
             throw new IOException("The export location must not be a symbolic link.");
         }
-        Path outputPath = getNextAvailablePath(exportDirectory);
         String csvContent = buildCsvContent(people, selectedFields);
 
         Files.createDirectories(exportDirectory);
         Path temporaryPath = Files.createTempFile(exportDirectory, "current-results-", ".tmp");
         try {
             Files.writeString(temporaryPath, csvContent);
-            Files.move(temporaryPath, outputPath);
+            return moveToNextAvailablePath(temporaryPath, exportDirectory);
         } finally {
             Files.deleteIfExists(temporaryPath);
         }
-
-        return outputPath;
     }
 
     private static String buildCsvContent(List<Person> people, List<ExportField> fields) {
@@ -91,18 +90,26 @@ public class CsvExporter {
         return "\"" + encodedValue.replace("\"", "\"\"") + "\"";
     }
 
-    private static Path getNextAvailablePath(Path exportDirectory) {
+    private static Path moveToNextAvailablePath(Path temporaryPath, Path exportDirectory) throws IOException {
         int exportNumber = 1;
 
         while (true) {
             Path outputPath = exportDirectory.resolve(
                     String.format("current-results-%02d.csv", exportNumber));
 
-            if (!Files.exists(outputPath)) {
-                return outputPath;
+            try {
+                Files.createFile(outputPath);
+            } catch (FileAlreadyExistsException e) {
+                exportNumber++;
+                continue;
             }
 
-            exportNumber++;
+            try {
+                return Files.move(temporaryPath, outputPath, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                Files.deleteIfExists(outputPath);
+                throw e;
+            }
         }
     }
 }
