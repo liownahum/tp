@@ -1,6 +1,7 @@
 package seedu.address.logic.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static seedu.address.logic.Messages.MESSAGE_INVALID_COMMAND_FORMAT;
 import static seedu.address.logic.commands.ImportCommand.MESSAGE_INVALID_FILENAME;
@@ -53,5 +54,10 @@ public class ImportCommandParserTest {
         for (String filename : invalidFilenames) {
             assertParseFailure(parser, filename, MESSAGE_INVALID_FILENAME);
         }
+    }
+
+    @Test
+    public void invalidFilenameMessage_isPlatformNeutral() {
+        assertFalse(MESSAGE_INVALID_FILENAME.contains("Windows"));
     }
 }

@@ -5,6 +5,7 @@ import java.util.Comparator;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -71,6 +72,7 @@ public class PersonCard extends UiPart<Region> {
         name.setText(person.getName().fullName);
         phone.setText(person.getPhone().value);
         email.setText(person.getEmail().value);
+        addFullTextTooltip(email);
         membershipStatus.setText(toDisplayText(person.getStatus().toString()));
         memberType.setText(toDisplayText(person.getMemberType().toString()));
 
@@ -81,6 +83,9 @@ public class PersonCard extends UiPart<Region> {
 
         role.setVisible(hasRole);
         role.setManaged(hasRole);
+        if (hasRole) {
+            addFullTextTooltip(role);
+        }
 
         person.getInstruments().stream()
                 .sorted(Comparator.comparing(Instrument::getName, String.CASE_INSENSITIVE_ORDER))
@@ -109,6 +114,16 @@ public class PersonCard extends UiPart<Region> {
     /** Returns whether the supplied operating-system name identifies macOS. */
     static boolean isMacOs(String osName) {
         return osName.startsWith("Mac");
+    }
+
+    /**
+     * Keeps a field's complete value accessible when its label is clipped in a narrow card.
+     */
+    private static void addFullTextTooltip(Label label) {
+        Tooltip tooltip = new Tooltip(label.getText());
+        tooltip.setWrapText(true);
+        tooltip.setMaxWidth(400);
+        label.setTooltip(tooltip);
     }
 
     /**

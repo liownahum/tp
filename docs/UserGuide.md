@@ -72,7 +72,7 @@ Command feedback has a **Success** label in green when a command completes and a
 * Items followed by `…`​ can appear zero or more times.<br>
   For example, `[i/INSTRUMENT:YEARS]…​` may be omitted, or written as `i/Violin:5` or `i/Violin:5 i/Piano:2`.
 
-* Parameters can be in any order. For `export`, their order determines the CSV column order.<br>
+* Prefixed parameters can be in any order. For `export`, their order determines the CSV column order. Positional parameters must stay in the position shown in the command format; for example, `INDEX` must precede the prefixed fields in `edit`.<br>
   For example, if the command specifies `n/NAME p/PHONE_NUMBER`, `p/PHONE_NUMBER n/NAME` is also acceptable.
 
 * A parameter value cannot contain a space followed by another prefix of the same command, as HiveMind reads that as the start of a new parameter.<br>
@@ -178,7 +178,7 @@ name,phone,email,status,memberType,role,instruments,groups
 "Benjamin Lee","92345678","benjamin.lee@example.com","active-alumnus","teacher","","Cello:12",""
 ```
 
-If any row has invalid data, does not contain eight columns, or has the same recorded details as an existing member or another CSV row, the entire import fails and the directory remains unchanged. Sharing only a name or phone number is allowed. Unlike `add`, import rejects identical records so a repeated CSV import cannot silently duplicate the directory. Instrument and group names are compared ignoring case when identifying identical records.
+If any row has invalid data, does not contain eight columns, or has the same recorded details as an existing member, the entire import fails and the directory remains unchanged. This prevents importing the same file twice from silently duplicating the directory. Identical rows within one CSV are imported as separate records with fresh IDs and produce a possible-duplicate warning, so a default export can restore such records after `clear`. Instrument and group names are compared ignoring case when identifying identical records.
 
 Example: `import members.csv`
 
@@ -197,7 +197,7 @@ Each member card displays:
 * Recorded instruments and their years of experience, sorted alphabetically by instrument name, ignoring case. For example, `Piano (5 yrs)` and `Violin (1 yr)`. No instrument labels appear when none are recorded.
 * A `Groups:` heading with one badge per participation group, ordered alphabetically ignoring case. No groups section is shown when none are recorded.
 
-Long names, contact details, roles, instruments and groups wrap as the window narrows. Scroll down to see details or members below the visible area.
+Long names, contact details, roles, instruments and groups wrap as the window narrows. If an email or role is cut off, hover over that field to see its complete text in a tooltip. Scroll down to see details or members below the visible area.
 
 The same card details are shown in `find` and `filter` results. Displayed indices start at `1` and refer to the current list, so a member's index may change after a search, filter or sort. Use the current displayed index for commands such as `edit` and `delete`.
 
@@ -420,7 +420,11 @@ Keep an existing member's `id` unchanged when editing the data file. To create a
 When loading saved data, HiveMind ignores group entries made only of non-breaking spaces, including mixtures with ordinary spaces or tabs. Members and their other details are preserved. Empty group names and names made only of ordinary spaces or tabs make the data file invalid. Loading does not change the file; the next successful command that changes directory data saves it without the ignored group entries.
 
 <div markdown="span" class="alert alert-warning">:exclamation: **Caution:**
-If your changes make the data file invalid, HiveMind starts with an empty directory at the next run, creates a numbered backup alongside it (e.g., `addressbook.json.bak-01`, followed by `addressbook.json.bak-02` if another backup is needed), and prevents directory changes from being saved. Repair or restore the original data file before restarting the app.<br>
+If HiveMind finds `addressbook.json` but cannot load it, HiveMind starts with an empty directory and prevents directory
+changes from being saved. If `addressbook.json` remains a regular file, HiveMind creates a numbered backup
+alongside it (e.g., `addressbook.json.bak-01`, followed by `addressbook.json.bak-02` if another backup is needed). If
+the path is not a regular file, such as when it is a folder, HiveMind reports that a backup could not be created and
+does not create an empty backup folder. Repair or restore the original data file before restarting the app.<br>
 Furthermore, certain edits can cause HiveMind to behave in unexpected ways (e.g., if a value entered is outside of the acceptable range). Therefore, edit the data file only if you are confident that you can update it correctly.
 </div>
 

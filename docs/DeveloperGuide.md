@@ -109,9 +109,9 @@ On Windows PowerShell, set `$env:HIVEMIND_UI_TESTS = "true"` before running the 
 
 `PersonCard` loads `PersonListCard.fxml` through `UiPart`. The FXML `fx:id` attributes match the controller's `@FXML` fields. The constructor reads the person's public getters to populate the name, contact details, membership status, member type, optional role, and instruments. Type and status appear as text badges. `PersonCard.toDisplayText` capitalises the first character and replaces keyword hyphens with spaces for display (for example, `active-alumnus` becomes `Active alumnus`); model values, command keywords and storage remain unchanged. Card-specific styles in `DarkTheme.css` distinguish the name heading, contact details, secondary information and badges without changing the rest of the theme. Instrument labels use `Instrument.toDisplayString()` and are sorted by name, ignoring case.
 
-When no role is recorded, the role label has both `visible` and `managed` set to `false`: it is hidden and does not reserve layout space. Name, contact, and role labels allow text wrapping, while flow panes allow the membership details and instrument labels to move onto additional rows as space narrows. These changes affect presentation only; the model and stored records are unchanged.
+When no role is recorded, the role label has both `visible` and `managed` set to `false`: it is hidden and does not reserve layout space. Name, contact, and role labels allow text wrapping, while flow panes allow the membership details and instrument labels to move onto additional rows as space narrows. The email label and any recorded role also have full-text tooltips, with wrapping and a maximum width of 400 pixels, so clipped values remain accessible in narrow cards. These changes affect presentation only; the model and stored records are unchanged.
 
-`PersonCardTest` loads the actual FXML and checks field values, all status/type combinations, role visibility and layout participation, empty instruments, and instrument ordering. It runs on the JavaFX application thread and requires a working graphical session. Enable it with the environment variable `HIVEMIND_UI_TESTS=true`; otherwise JUnit skips this test class so the existing headless CI remains usable. On Linux/macOS, run:
+`PersonCardTest` loads the actual FXML and checks field values, all status/type combinations, role visibility and layout participation, empty instruments, instrument ordering, and full-text tooltips for long unbroken email and role values after resizing. It runs on the JavaFX application thread and requires a working graphical session. Enable it with the environment variable `HIVEMIND_UI_TESTS=true`; otherwise JUnit skips this test class so the existing headless CI remains usable. On Linux/macOS, run:
 
 ```sh
 HIVEMIND_UI_TESTS=true ./gradlew test --tests seedu.address.ui.PersonCardTest --rerun-tasks
@@ -195,6 +195,10 @@ The `Storage` component,
 
 This loading rule applies only to saved JSON data. Command parsing rejects every group name that normalizes to empty. Loading does not rewrite the data file, and successfully loaded records remain editable and saveable. The next successful command requiring a save writes the directory without the skipped memberships.
 
+Before recovery backs up an unreadable address book, `JsonAddressBookStorage` verifies that its path is a regular file.
+If the path is a directory or another non-regular path, `backupAddressBook()` throws an `IOException`; `MainApp`
+reports that the backup could not be created, and no empty backup directory is created.
+
 ### Common classes
 
 Classes used by multiple components are in the `seedu.address.commons` package.
@@ -215,8 +219,8 @@ working directory for compatibility with Gradle and IDE launches.
 
 `LogsCenter` obtains its log path from `ApplicationPaths` during its initial static configuration, before the first
 application log entry can create a file. `MainApp` uses the same abstraction for preferences, member data and the
-imports directory. `ImportCommand` and `ExportCommand` use it for their default directories. Recovery backups remain
-beside the configured member-data file, so they are under the same application home. Tests can continue to pass
+imports directory. `ImportCommand` and `ExportCommand` use it for their default directories. Recovery backups, when
+created, remain beside the configured member-data file, so they are under the same application home. Tests can pass
 explicit temporary import and export directories to the commands, avoiding writes to the repository during unit and
 integration testing.
 
@@ -234,7 +238,7 @@ Each `Person` has a stable UUID record ID, independent of editable contact detai
 
 `JsonAdaptedPerson` saves the ID with the other fields and restores it on load. Older files without IDs receive fresh IDs as they load, which are written on the next successful data change. Malformed or repeated IDs are invalid data. Undo snapshots retain the same IDs because they copy the immutable person records.
 
-**Design choice:** Record IDs allow legitimate shared names and phone numbers without treating editable contact details as permanent identity. They add one internal JSON field but require no new user command or confirmation step. CSV keeps its existing eight columns and receives new record IDs on import. Since CSV has no IDs, `ImportCommand` rejects records with identical recorded details against the existing directory or earlier CSV rows, while allowing shared names with differing details.
+**Design choice:** Record IDs allow legitimate shared names and phone numbers without treating editable contact details as permanent identity. They add one internal JSON field but require no new user command or confirmation step. CSV keeps its existing eight columns and receives new record IDs on import. Since CSV has no IDs, `ImportCommand` rejects details matching the directory as it was before the import, while repeated rows within one CSV receive fresh IDs and a possible-duplicate warning. This allows a full export to restore identical records after `clear` without allowing a repeated import to duplicate the directory.
 
 ### Participation groups
 
@@ -284,6 +288,20 @@ Before tokenizing, the parser reuses `ArgumentTokenizer.verifyNoUnknownPrefixes`
 
 The command replaces the predicate on the full directory's `FilteredList`, reports its match count, and leaves stored records unchanged. `list` restores all records. Parser, predicate, and command tests cover repeated criteria, invalid inputs, threshold boundaries, matching years on the correct instrument, combined criteria, people without instruments or groups, group-name normalization and whole-name matching, empty results, and searches after earlier filters.
 
+The following two sequence diagrams trace a successful `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra` command. Parsing and execution are shown separately, as for `find`. In both diagrams, `criteria` is shorthand for the five sets of statuses, instrument criteria, member types, roles, and groups passed to the constructors.
+
+First, `LogicManager` calls `AddressBookParser.parseCommand`, which delegates to `FilterCommandParser` to validate the criteria and return the parsed command `f`. No predicate is created during parsing.
+
+![Filter command parsing: criteria validation and command creation](images/FilterParsingSequenceDiagram.png)
+
+[Open the parsing diagram at full size](images/FilterParsingSequenceDiagram.png). [PlantUML source](diagrams/FilterParsingSequenceDiagram.puml).
+
+Execution then continues in `LogicManager`. The command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`, and `p:Predicate` is the predicate created during execution. Model snapshots and UI list-change notifications are omitted.
+
+![Filter command execution: predicate creation, filtered-list evaluation, result count, and feedback](images/FilterSequenceDiagram.png)
+
+[Open the execution diagram at full size](images/FilterSequenceDiagram.png). [PlantUML source](diagrams/FilterSequenceDiagram.puml).
+
 ### Exporting current results
 
 `AddressBookParser` delegates `export [f/FIELD]...` to `ExportCommandParser`. With no arguments, the parser creates a default `ExportCommand` using `ExportField.DEFAULT_FIELDS`: name, phone, email, status, memberType, role, instruments, and groups. Otherwise, it tokenizes repeated `f/` values, matches their exact case-sensitive names against `ExportField` headers, and preserves the requested order. Unsupported, empty or repeated field selections and unexpected arguments cause a `ParseException` before execution, so no file is created.
@@ -304,25 +322,19 @@ The following sequence diagram traces execution of a parsed `export f/name f/pho
 
 [Open the sequence diagram at full size](images/ExportSequenceDiagram.png). [PlantUML source](diagrams/ExportSequenceDiagram.puml).
 
-The following sequence diagram traces `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra`, using all five supported fields. Parsing creates a `FilterCommand` containing the criteria; executing that command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`, and `p:Predicate` is the `PersonMatchesFilterPredicate` created during execution. The diagram uses `criteria` as shorthand for the five sets passed to the command and predicate constructors.
-
-![Sequence diagram for filter, showing criteria parsing, predicate creation during execution, filtered-list evaluation, and the result count](images/FilterSequenceDiagram.png)
-
-[Open the sequence diagram at full size](images/FilterSequenceDiagram.png). [PlantUML source](diagrams/FilterSequenceDiagram.puml). The diagram summarizes successful parsing in a reference frame so the execution flow remains readable at the guide's width; model snapshots and UI list-change notifications are omitted.
-
 ### Importing people from CSV
 
 `AddressBookParser` routes `import FILE_NAME` to `ImportCommandParser`. The parser accepts a non-empty `.csv` file name without path separators, so `ImportCommand` always resolves it inside the `imports` directory.
 
 `ImportCommand` asks `CsvImporter.importPeopleWithLineNumbers` to read the entire CSV before changing the model. `CsvImporter` validates the required header and eight-column layout, then constructs `Person` objects using the existing model value objects such as `Name`, `Phone`, `Email`, `Status`, and `MemberType`. This reuses the application's validation rules instead of duplicating them in the CSV layer. It returns the complete imported list with each record's starting physical line number only when every row is valid, including records spanning multiple lines.
 
-After parsing succeeds, `ImportCommand` copies the current address book and checks every imported person's recorded details against the copy before adding it. This detects identical records against both existing members and earlier CSV rows without mutating the model, while allowing different records to share names or phone numbers. Duplicate feedback identifies the person's name and starting physical line number. Only when all additions succeed does it replace the model's address book with the copy and show the full directory. Consequently, invalid CSV data and identical records fail the import atomically: the current directory and active filter remain unchanged.
+After parsing succeeds, `ImportCommand` copies the current address book and checks every imported person's recorded details against the original directory before adding it to the copy. A matching existing record fails the import, while a row matching an earlier CSV row is added with a fresh record ID and possible-duplicate warning. Duplicate failure feedback identifies the person's name and starting physical line number. Only when all additions succeed does the command replace the model's address book with the copy and show the full directory. Consequently, invalid CSV data and records matching the original directory fail the import atomically: the current directory and active filter remain unchanged.
 
 The following sequence diagram focuses on a successful `ImportCommand.execute(...)` call. Command parsing, field-level CSV parsing, error handling, and `LogicManager`'s generic save-and-rollback handling are omitted; they do not affect the command's validate-then-replace behavior.
 
 ![Import command sequence diagram](images/ImportSequenceDiagram.png)
 
-`ImportCommandTest` and `ImportCommandIntegrationTest` cover successful imports, duplicate handling, invalid data, malformed row layouts, optional fields, and atomic failures. `AddressBookParserTest` verifies that the command is recognised.
+`ImportCommandTest` and `ImportCommandIntegrationTest` cover successful imports, existing-record rejection, repeated-row warnings, default export/import round trips, invalid data, malformed row layouts, optional fields, and atomic failures. `AddressBookParserTest` verifies that the command is recognised.
 
 ### Undo/redo feature
 
@@ -500,32 +512,30 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to add a member.
-2.  HiveMind requests the member's name and contact details, and any membership or musical details to record.
-3.  Society coordinator supplies the requested details.
-4.  HiveMind adds the member to the directory and shows the saved record.
+1.  Society coordinator submits an `add` command containing the required member details and any optional details to record.
+2.  HiveMind adds the member to the directory and shows the saved record.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that a required detail is missing or a supplied detail is invalid.
+* 2a. HiveMind detects that a required detail is missing or a supplied detail is invalid.
 
-    * 3a1. HiveMind shows an error message describing the problem.
-    * 3a2. Society coordinator supplies corrected details.
+    * 2a1. HiveMind shows an error message describing the problem.
+    * 2a2. Society coordinator resubmits the complete command with corrected details.
 
-      Steps 3a1-3a2 are repeated until the supplied details are valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the supplied details are valid.
+      Use case resumes at step 2.
 
-* 3b. HiveMind detects that the supplied name or phone number matches an existing record.
+* 2b. HiveMind detects that the supplied name or phone number matches an existing record.
 
-    * 3b1. HiveMind warns the society coordinator about each possible duplicate.
+    * 2b1. HiveMind warns the society coordinator about each possible duplicate.
 
-      Use case resumes at step 4.
+      Use case resumes at step 2.
 
-* 4a. HiveMind cannot save the updated directory.
+* 2c. HiveMind cannot save the updated directory.
 
-    * 4a1. HiveMind shows an error message informing the society coordinator that the new record was not saved.
+    * 2c1. HiveMind shows an error message informing the society coordinator that the new record was not saved.
 
       Use case ends.
 
@@ -537,34 +547,32 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to update a member's recorded details.
-2.  HiveMind requests the member to update and the details to change.
-3.  Society coordinator identifies the member and supplies the new details, such as contact, membership, or musical information.
-4.  HiveMind updates the supplied details, leaves other details unchanged, and shows the updated record.
+1.  Society coordinator submits an `edit` command containing the member's displayed index and the details to change.
+2.  HiveMind updates the supplied details, leaves other details unchanged, and shows the updated record.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
+* 2a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
 
-    * 3a1. HiveMind shows an error message and requests a valid selection.
-    * 3a2. Society coordinator identifies a member in the displayed list.
+    * 2a1. HiveMind shows an error message describing the invalid selection.
+    * 2a2. Society coordinator resubmits the complete command with a valid displayed index.
 
-      Steps 3a1-3a2 are repeated until the selection is valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the selection is valid.
+      Use case resumes at step 2.
 
-* 3b. HiveMind detects that no updated detail was supplied or a supplied detail is invalid.
+* 2b. HiveMind detects that no updated detail was supplied or a supplied detail is invalid.
 
-    * 3b1. HiveMind shows an error message describing the problem.
-    * 3b2. Society coordinator supplies corrected details.
+    * 2b1. HiveMind shows an error message describing the problem.
+    * 2b2. Society coordinator resubmits the complete command with corrected details.
 
-      Steps 3b1-3b2 are repeated until the supplied details are valid.
-      Use case resumes at step 4.
+      Steps 2b1-2b2 are repeated until the supplied details are valid.
+      Use case resumes at step 2.
 
-* 4a. HiveMind cannot save the updated directory.
+* 2c. HiveMind cannot save the updated directory.
 
-    * 4a1. HiveMind shows an error message informing the society coordinator that the change was not saved.
+    * 2c1. HiveMind shows an error message informing the society coordinator that the change was not saved.
 
       Use case ends.
 
@@ -576,26 +584,24 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to remove an obsolete or incorrectly added member record.
-2.  HiveMind requests the member to remove.
-3.  Society coordinator identifies the member in the displayed list.
-4.  HiveMind removes the member's record from the directory and confirms which member was removed.
+1.  Society coordinator submits a `delete` command containing the member's displayed index.
+2.  HiveMind removes the member's record from the directory and confirms which member was removed.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
+* 2a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
 
-    * 3a1. HiveMind shows an error message and requests a valid selection.
-    * 3a2. Society coordinator identifies a member in the displayed list.
+    * 2a1. HiveMind shows an error message describing the invalid selection.
+    * 2a2. Society coordinator resubmits the complete command with a valid displayed index.
 
-      Steps 3a1-3a2 are repeated until the selection is valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the selection is valid.
+      Use case resumes at step 2.
 
-* 4a. HiveMind cannot save the updated directory.
+* 2b. HiveMind cannot save the updated directory.
 
-    * 4a1. HiveMind shows an error message informing the society coordinator that the deletion was not saved.
+    * 2b1. HiveMind shows an error message informing the society coordinator that the deletion was not saved.
 
       Use case ends.
 
@@ -607,26 +613,24 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to shortlist suitable players.
-2.  HiveMind requests the filtering criteria.
-3.  Society coordinator supplies one or more criteria, such as status, instrument, or musical experience.
-4.  HiveMind shows the members who satisfy the criteria.
+1.  Society coordinator submits a `filter` command containing one or more criteria, such as status, instrument, or musical experience.
+2.  HiveMind shows the members who satisfy the criteria.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that no criterion was supplied or a supplied criterion is invalid.
+* 2a. HiveMind detects that no criterion was supplied or a supplied criterion is invalid.
 
-    * 3a1. HiveMind shows an error message describing the problem.
-    * 3a2. Society coordinator supplies corrected criteria.
+    * 2a1. HiveMind shows an error message describing the problem.
+    * 2a2. Society coordinator resubmits the complete command with corrected criteria.
 
-      Steps 3a1-3a2 are repeated until the supplied criteria are valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the supplied criteria are valid.
+      Use case resumes at step 2.
 
-* 4a. No member satisfies the criteria.
+* 2b. No member satisfies the criteria.
 
-    * 4a1. HiveMind informs the society coordinator that no members were found.
+    * 2b1. HiveMind informs the society coordinator that no members were found.
 
       Use case ends.
 
@@ -765,6 +769,8 @@ Use a disposable directory for these checks so the test records do not affect yo
    Expected: Each result shows the appropriate members with complete card details and indices starting at `1`; the no-match search shows no cards; `list` restores all members in insertion order.
 1. Add a member with a long name, email and role, and several instruments. Resize the window narrower and scroll through the list.<br>
    Expected: The name remains prominent and the membership badges remain readable without relying on colour. Text wraps without overlapping other fields, instrument labels flow onto additional rows, and all recorded details remain accessible. Check both full and empty optional fields again after scrolling.
+1. Run `add n/Test Member p/91234567 e/thisisaverylongemailaddressusedtotestoverflowinaction@example.com s/member r/percussion-section-leader-with-a-very-long-title`. Narrow the member list to about 350 pixels, then hover over the email and role in turn.<br>
+   Expected: Each tooltip shows the complete field text, including the full email domain and the end of the role. Resize the window wider and narrower and repeat; the tooltips still show the full values. A member without a role still has no role row.
 1. Run `add n/Card Width p/91234567 e/music.coordinator.long.contact.address@example.com s/member r/Student Coordinator for the University Chamber Orchestra i/Historical Keyboard and String Instrument Ensemble Performance Specialisation:12 g/University Chamber Orchestra Alumni and Student Combined Performance Group`. Resize the window to its minimum 450 × 600, then widen and narrow it again.<br>
    Expected: The full instrument name and `12 yrs` remain readable on wrapped lines, as does the group name. Neither badge pushes contact details or other card content beyond the visible right edge. Scroll vertically if the card is taller than the available area.
 

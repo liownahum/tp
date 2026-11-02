@@ -9,7 +9,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import seedu.address.commons.util.FileUtil;
 import seedu.address.model.person.Person;
 
 /**
@@ -50,11 +49,20 @@ public class CsvExporter {
             throw new IllegalArgumentException("Select at least one export field without repetitions.");
         }
 
+        if (Files.isSymbolicLink(exportDirectory)) {
+            throw new IOException("The export location must not be a symbolic link.");
+        }
         Path outputPath = getNextAvailablePath(exportDirectory);
         String csvContent = buildCsvContent(people, selectedFields);
 
-        FileUtil.createIfMissing(outputPath);
-        FileUtil.writeToFile(outputPath, csvContent);
+        Files.createDirectories(exportDirectory);
+        Path temporaryPath = Files.createTempFile(exportDirectory, "current-results-", ".tmp");
+        try {
+            Files.writeString(temporaryPath, csvContent);
+            Files.move(temporaryPath, outputPath);
+        } finally {
+            Files.deleteIfExists(temporaryPath);
+        }
 
         return outputPath;
     }
