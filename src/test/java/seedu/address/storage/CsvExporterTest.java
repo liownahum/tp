@@ -3,11 +3,14 @@ package seedu.address.storage;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.testutil.TypicalPersons.DANIEL;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -93,6 +96,18 @@ public class CsvExporterTest {
 
         assertEquals(secondExport, returnedPath);
         assertEquals("existing export", Files.readString(firstExport));
+    }
+
+    @Test
+    public void export_encodingFails_doesNotLeaveOutputFile() throws IOException {
+        // An unpaired surrogate cannot be encoded as UTF-8, forcing the write to fail.
+        Person person = new PersonBuilder().withRole("Role\uD800").build();
+
+        assertThrows(IOException.class, () -> CsvExporter.export(List.of(person), testFolder));
+
+        try (Stream<Path> files = Files.list(testFolder)) {
+            assertTrue(files.findAny().isEmpty());
+        }
     }
 
     @Test
