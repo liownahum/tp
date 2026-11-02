@@ -281,11 +281,19 @@ Before tokenizing, the parser reuses `ArgumentTokenizer.verifyNoUnknownPrefixes`
 
 The command replaces the predicate on the full directory's `FilteredList`, reports its match count, and leaves stored records unchanged. `list` restores all records. Parser, predicate, and command tests cover repeated criteria, invalid inputs, threshold boundaries, matching years on the correct instrument, combined criteria, people without instruments or groups, group-name normalization and whole-name matching, empty results, and searches after earlier filters.
 
-The following sequence diagram traces `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra`, using all five supported fields. Parsing creates a `FilterCommand` containing the criteria; executing that command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`, and `p:Predicate` is the `PersonMatchesFilterPredicate` created during execution. The diagram uses `criteria` as shorthand for the five sets passed to the command and predicate constructors.
+The following two sequence diagrams trace a successful `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra` command. Parsing and execution are shown separately, as for `find`. In both diagrams, `criteria` is shorthand for the five sets of statuses, instrument criteria, member types, roles, and groups passed to the constructors.
 
-![Sequence diagram for filter, showing criteria parsing, predicate creation during execution, filtered-list evaluation, and the result count](images/FilterSequenceDiagram.png)
+First, `LogicManager` calls `AddressBookParser.parseCommand`, which delegates to `FilterCommandParser` to validate the criteria and return the parsed command `f`. No predicate is created during parsing.
 
-[Open the sequence diagram at full size](images/FilterSequenceDiagram.png). [PlantUML source](diagrams/FilterSequenceDiagram.puml). The diagram summarizes successful parsing in a reference frame so the execution flow remains readable at the guide's width; model snapshots and UI list-change notifications are omitted.
+![Filter command parsing: criteria validation and command creation](images/FilterParsingSequenceDiagram.png)
+
+[Open the parsing diagram at full size](images/FilterParsingSequenceDiagram.png). [PlantUML source](diagrams/FilterParsingSequenceDiagram.puml).
+
+Execution then continues in `LogicManager`. The command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`, and `p:Predicate` is the predicate created during execution. Model snapshots and UI list-change notifications are omitted.
+
+![Filter command execution: predicate creation, filtered-list evaluation, result count, and feedback](images/FilterSequenceDiagram.png)
+
+[Open the execution diagram at full size](images/FilterSequenceDiagram.png). [PlantUML source](diagrams/FilterSequenceDiagram.puml).
 
 ### Exporting current results
 

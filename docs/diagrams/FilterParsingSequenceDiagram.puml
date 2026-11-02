@@ -1,0 +1,41 @@
+@startuml
+!include style.puml
+skinparam ArrowFontStyle plain
+skinparam sequenceMessageAlign left
+skinparam BoxPadding 20
+
+box Logic LOGIC_COLOR_T1
+participant ":AddressBookParser" as AddressBookParser LOGIC_COLOR
+participant ":FilterCommandParser" as FilterCommandParser LOGIC_COLOR
+participant "f:FilterCommand" as FilterCommand LOGIC_COLOR
+end box
+
+[-> AddressBookParser : parseCommand(commandText)
+activate AddressBookParser
+
+create FilterCommandParser
+AddressBookParser -> FilterCommandParser
+activate FilterCommandParser
+FilterCommandParser --> AddressBookParser
+deactivate FilterCommandParser
+
+AddressBookParser -> FilterCommandParser : parse(arguments)
+activate FilterCommandParser
+note over FilterCommandParser
+Tokenize and validate arguments.
+Build sets of statuses, instrument criteria,
+member types, roles, and groups.
+At least one criterion is required.
+end note
+
+create FilterCommand
+FilterCommandParser -> FilterCommand : new FilterCommand(criteria)
+activate FilterCommand
+FilterCommand --> FilterCommandParser : f
+deactivate FilterCommand
+FilterCommandParser --> AddressBookParser : f
+deactivate FilterCommandParser
+[<-- AddressBookParser : f
+deactivate AddressBookParser
+
+@enduml
