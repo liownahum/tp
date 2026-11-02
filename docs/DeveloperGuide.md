@@ -281,6 +281,20 @@ Before tokenizing, the parser reuses `ArgumentTokenizer.verifyNoUnknownPrefixes`
 
 The command replaces the predicate on the full directory's `FilteredList`, reports its match count, and leaves stored records unchanged. `list` restores all records. Parser, predicate, and command tests cover repeated criteria, invalid inputs, threshold boundaries, matching years on the correct instrument, combined criteria, people without instruments or groups, group-name normalization and whole-name matching, empty results, and searches after earlier filters.
 
+The following two sequence diagrams trace a successful `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra` command. Parsing and execution are shown separately, as for `find`. In both diagrams, `criteria` is shorthand for the five sets of statuses, instrument criteria, member types, roles, and groups passed to the constructors.
+
+First, `LogicManager` calls `AddressBookParser.parseCommand`, which delegates to `FilterCommandParser` to validate the criteria and return the parsed command `f`. No predicate is created during parsing.
+
+![Filter command parsing: criteria validation and command creation](images/FilterParsingSequenceDiagram.png)
+
+[Open the parsing diagram at full size](images/FilterParsingSequenceDiagram.png). [PlantUML source](diagrams/FilterParsingSequenceDiagram.puml).
+
+Execution then continues in `LogicManager`. The command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`, and `p:Predicate` is the predicate created during execution. Model snapshots and UI list-change notifications are omitted.
+
+![Filter command execution: predicate creation, filtered-list evaluation, result count, and feedback](images/FilterSequenceDiagram.png)
+
+[Open the execution diagram at full size](images/FilterSequenceDiagram.png). [PlantUML source](diagrams/FilterSequenceDiagram.puml).
+
 ### Exporting current results
 
 `AddressBookParser` delegates `export [f/FIELD]...` to `ExportCommandParser`. With no arguments, the parser creates a default `ExportCommand` using `ExportField.DEFAULT_FIELDS`: name, phone, email, status, memberType, role, instruments, and groups. Otherwise, it tokenizes repeated `f/` values, matches their exact case-sensitive names against `ExportField` headers, and preserves the requested order. Unsupported, empty or repeated field selections and unexpected arguments cause a `ParseException` before execution, so no file is created.
@@ -300,12 +314,6 @@ The following sequence diagram traces execution of a parsed `export f/name f/pho
 ![Export sequence diagram showing field selection, retrieval of displayed results, and CSV creation](images/ExportSequenceDiagram.png)
 
 [Open the sequence diagram at full size](images/ExportSequenceDiagram.png). [PlantUML source](diagrams/ExportSequenceDiagram.puml).
-
-The following sequence diagram traces `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra`, using all five supported fields. Parsing creates a `FilterCommand` containing the criteria; executing that command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`, and `p:Predicate` is the `PersonMatchesFilterPredicate` created during execution. The diagram uses `criteria` as shorthand for the five sets passed to the command and predicate constructors.
-
-![Sequence diagram for filter, showing criteria parsing, predicate creation during execution, filtered-list evaluation, and the result count](images/FilterSequenceDiagram.png)
-
-[Open the sequence diagram at full size](images/FilterSequenceDiagram.png). [PlantUML source](diagrams/FilterSequenceDiagram.puml). The diagram summarizes successful parsing in a reference frame so the execution flow remains readable at the guide's width; model snapshots and UI list-change notifications are omitted.
 
 ### Importing people from CSV
 
@@ -497,32 +505,30 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to add a member.
-2.  HiveMind requests the member's name and contact details, and any membership or musical details to record.
-3.  Society coordinator supplies the requested details.
-4.  HiveMind adds the member to the directory and shows the saved record.
+1.  Society coordinator submits an `add` command containing the required member details and any optional details to record.
+2.  HiveMind adds the member to the directory and shows the saved record.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that a required detail is missing or a supplied detail is invalid.
+* 2a. HiveMind detects that a required detail is missing or a supplied detail is invalid.
 
-    * 3a1. HiveMind shows an error message describing the problem.
-    * 3a2. Society coordinator supplies corrected details.
+    * 2a1. HiveMind shows an error message describing the problem.
+    * 2a2. Society coordinator resubmits the complete command with corrected details.
 
-      Steps 3a1-3a2 are repeated until the supplied details are valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the supplied details are valid.
+      Use case resumes at step 2.
 
-* 3b. HiveMind detects that the supplied name or phone number matches an existing record.
+* 2b. HiveMind detects that the supplied name or phone number matches an existing record.
 
-    * 3b1. HiveMind warns the society coordinator about each possible duplicate.
+    * 2b1. HiveMind warns the society coordinator about each possible duplicate.
 
-      Use case resumes at step 4.
+      Use case resumes at step 2.
 
-* 4a. HiveMind cannot save the updated directory.
+* 2c. HiveMind cannot save the updated directory.
 
-    * 4a1. HiveMind shows an error message informing the society coordinator that the new record was not saved.
+    * 2c1. HiveMind shows an error message informing the society coordinator that the new record was not saved.
 
       Use case ends.
 
@@ -534,34 +540,32 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to update a member's recorded details.
-2.  HiveMind requests the member to update and the details to change.
-3.  Society coordinator identifies the member and supplies the new details, such as contact, membership, or musical information.
-4.  HiveMind updates the supplied details, leaves other details unchanged, and shows the updated record.
+1.  Society coordinator submits an `edit` command containing the member's displayed index and the details to change.
+2.  HiveMind updates the supplied details, leaves other details unchanged, and shows the updated record.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
+* 2a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
 
-    * 3a1. HiveMind shows an error message and requests a valid selection.
-    * 3a2. Society coordinator identifies a member in the displayed list.
+    * 2a1. HiveMind shows an error message describing the invalid selection.
+    * 2a2. Society coordinator resubmits the complete command with a valid displayed index.
 
-      Steps 3a1-3a2 are repeated until the selection is valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the selection is valid.
+      Use case resumes at step 2.
 
-* 3b. HiveMind detects that no updated detail was supplied or a supplied detail is invalid.
+* 2b. HiveMind detects that no updated detail was supplied or a supplied detail is invalid.
 
-    * 3b1. HiveMind shows an error message describing the problem.
-    * 3b2. Society coordinator supplies corrected details.
+    * 2b1. HiveMind shows an error message describing the problem.
+    * 2b2. Society coordinator resubmits the complete command with corrected details.
 
-      Steps 3b1-3b2 are repeated until the supplied details are valid.
-      Use case resumes at step 4.
+      Steps 2b1-2b2 are repeated until the supplied details are valid.
+      Use case resumes at step 2.
 
-* 4a. HiveMind cannot save the updated directory.
+* 2c. HiveMind cannot save the updated directory.
 
-    * 4a1. HiveMind shows an error message informing the society coordinator that the change was not saved.
+    * 2c1. HiveMind shows an error message informing the society coordinator that the change was not saved.
 
       Use case ends.
 
@@ -573,26 +577,24 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to remove an obsolete or incorrectly added member record.
-2.  HiveMind requests the member to remove.
-3.  Society coordinator identifies the member in the displayed list.
-4.  HiveMind removes the member's record from the directory and confirms which member was removed.
+1.  Society coordinator submits a `delete` command containing the member's displayed index.
+2.  HiveMind removes the member's record from the directory and confirms which member was removed.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
+* 2a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
 
-    * 3a1. HiveMind shows an error message and requests a valid selection.
-    * 3a2. Society coordinator identifies a member in the displayed list.
+    * 2a1. HiveMind shows an error message describing the invalid selection.
+    * 2a2. Society coordinator resubmits the complete command with a valid displayed index.
 
-      Steps 3a1-3a2 are repeated until the selection is valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the selection is valid.
+      Use case resumes at step 2.
 
-* 4a. HiveMind cannot save the updated directory.
+* 2b. HiveMind cannot save the updated directory.
 
-    * 4a1. HiveMind shows an error message informing the society coordinator that the deletion was not saved.
+    * 2b1. HiveMind shows an error message informing the society coordinator that the deletion was not saved.
 
       Use case ends.
 
@@ -604,26 +606,24 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to shortlist suitable players.
-2.  HiveMind requests the filtering criteria.
-3.  Society coordinator supplies one or more criteria, such as status, instrument, or musical experience.
-4.  HiveMind shows the members who satisfy the criteria.
+1.  Society coordinator submits a `filter` command containing one or more criteria, such as status, instrument, or musical experience.
+2.  HiveMind shows the members who satisfy the criteria.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that no criterion was supplied or a supplied criterion is invalid.
+* 2a. HiveMind detects that no criterion was supplied or a supplied criterion is invalid.
 
-    * 3a1. HiveMind shows an error message describing the problem.
-    * 3a2. Society coordinator supplies corrected criteria.
+    * 2a1. HiveMind shows an error message describing the problem.
+    * 2a2. Society coordinator resubmits the complete command with corrected criteria.
 
-      Steps 3a1-3a2 are repeated until the supplied criteria are valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the supplied criteria are valid.
+      Use case resumes at step 2.
 
-* 4a. No member satisfies the criteria.
+* 2b. No member satisfies the criteria.
 
-    * 4a1. HiveMind informs the society coordinator that no members were found.
+    * 2b1. HiveMind informs the society coordinator that no members were found.
 
       Use case ends.
 
