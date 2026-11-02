@@ -417,6 +417,8 @@ users are welcome to update data directly by editing that data file.
 
 Keep an existing member's `id` unchanged when editing the data file. To create another member, use `add` so the new record receives its own ID.
 
+When loading saved data, HiveMind combines duplicate instruments for each member instead of treating them as an invalid file. Names are compared using the same rules as `add`, including ignoring case and normalising whitespace. HiveMind keeps the entry with the highest years of experience, including that entry's capitalisation; if the years are equal, it keeps the first entry. For example, `Piano:3` and `piano:5` become `piano:5`. This merge is recorded only in the log, with no notice in the app or backup of the file. Loading does not change the file; the next successful command that changes member data saves the combined entries.
+
 When loading saved data, HiveMind ignores group entries made only of non-breaking spaces, including mixtures with ordinary spaces or tabs. Members and their other details are preserved. Empty group names and names made only of ordinary spaces or tabs make the data file invalid. Loading does not change the file; the next successful command that changes directory data saves it without the ignored group entries.
 
 <div markdown="span" class="alert alert-warning">:exclamation: **Caution:**
