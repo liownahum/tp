@@ -126,7 +126,7 @@ Format: `add n/NAME p/PHONE_NUMBER e/EMAIL s/STATUS [ty/TYPE] [r/ROLE] [i/INSTRU
 * `r/ROLE` is optional free text, such as `Section Leader`. Invisible formatting characters are removed, and the result cannot be blank. Extra spaces are removed, so `Vice   President`{: style="white-space: pre"} (three spaces) is saved as `Vice President` (one space).
 * Type and status appear beneath the member's name on the card. If a role is supplied, it appears beneath the contact details; otherwise, the role line is hidden.
 * `i/INSTRUMENT:YEARS` records an instrument the person plays and how many whole years they have played it, from `0` to `99`. For example, `i/Violin:5` or `i/Bass Guitar:1`.
-* Instrument names cannot be blank or contain `:`. Each instrument can be listed only once per person; names are compared ignoring case, surrounding whitespace, and repeated whitespace, including Unicode spaces, so `Violin` and `violin` count as the same instrument.
+* Instrument names cannot be blank or contain `:`. Each instrument can be listed only once per person; names are compared ignoring case, surrounding whitespace, and repeated whitespace, including Unicode spaces, so `Violin` and `violin` count as the same instrument. Invisible formatting characters, such as zero-width spaces copied from a web page, are removed from instrument names.
 * `g/GROUP` records a participation group, such as `g/Chamber Orchestra`. It may be repeated for multiple groups. Invisible formatting characters are removed, and names that become blank are rejected. Names are compared ignoring case, surrounding whitespace, and repeated whitespace, including Unicode spaces such as non-breaking spaces and en spaces, so repeated names are stored only once.
 * Recorded groups appear in the command's success message and as separate badges on the member card. A single group called `Dance, Music` has one badge; `g/Dance g/Music` produces two badges.
 * Start **each** group with the lowercase prefix `g/`, for example `g/Training g/Orchestra`. In `add`, an unrecognized prefix after a group can become part of that group's name: `g/Training gr/Orchestra` records one group named `Training gr/Orchestra`. Check the success message and correct a mistake with `edit INDEX g/Training g/Orchestra`.
@@ -216,6 +216,7 @@ Format: `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [s/STATUS] [ty/TYPE] [r/
 * Existing values will be updated to the input values.
 * `s/STATUS` and `ty/TYPE` accept the same values as in `add`: `member`, `active-alumnus`, or `inactive-alumnus` for status, and `student` or `teacher` for type, ignoring case.
 * `r/ROLE` replaces the person's role. To remove the role, enter `r/` without a role after it.
+* If you edit the name or phone number and it then matches another member's name ignoring case, or their phone number, HiveMind shows a possible-duplicate warning for each such member, as `add` does, and still makes the edit.
 * Fields that are not specified are preserved. For example, editing a person's status keeps their contact details, type, role, instruments, and groups.
 * Instruments are preserved when they are not edited.
 * When editing instruments, all of the person's existing instruments are replaced; adding instruments is not cumulative.
@@ -368,6 +369,7 @@ Reverts the most recent changes made by `add`, `edit`, `delete`, `clear` or `imp
 Format: `undo [COUNT]`
 
 * Reverts the `COUNT` most recent changes, most recent first. Without `COUNT`, only the most recent change is reverted.
+* The result lists the command of each reverted change as you typed it, most recent first. For example, after `delete 1` and then `delete 3`, `undo 2` shows `delete 3`, then `delete 1`.
 * `COUNT` must be a positive integer, e.g. 1, 2, 3, …​
 * You can undo changes back to when HiveMind was started. If fewer than `COUNT` changes can be undone, nothing is undone and HiveMind tells you how many can be, or that there is no change to undo.
 * Commands that do not change data (e.g. `list`, `find`, `filter`, `sort`, `export`) are not undone.
@@ -387,6 +389,7 @@ Format: `redo [COUNT]`
 * Restores the `COUNT` most recently undone changes. Without `COUNT`, only the most recently undone change is restored.
 * `COUNT` must be a positive integer, e.g. 1, 2, 3, …​
 * Changes are restored in the reverse order of undoing: the most recently undone change comes back first.
+* The result lists the command of each restored change as you typed it, in the order restored.
 * If fewer than `COUNT` undone changes can be restored, nothing is redone and HiveMind tells you how many can be, or that there is no undone change to redo.
 * Once you make a new change (e.g. `add`, `edit`, `delete`, `clear` or `import`) after an `undo`, the undone changes can no longer be redone. This also applies to an `edit` that leaves the member's details unchanged.
 * After a redo, the full member list is shown.

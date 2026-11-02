@@ -14,6 +14,37 @@ public class InstrumentTest {
     private static final List<String> UNICODE_WHITESPACE = List.of(
             "\u0085", "\u00a0", "\u1680", "\u2000", "\u2001", "\u2002", "\u2003", "\u2004", "\u2005", "\u2006",
             "\u2007", "\u2008", "\u2009", "\u200a", "\u2028", "\u2029", "\u202f", "\u205f", "\u3000");
+    private static final List<String> INVISIBLE_FORMAT_CHARACTERS = List.of(
+            "\u00ad", "\u200b", "\u200c", "\u200d", "\u2060", "\ufeff");
+
+    @Test
+    public void constructor_invisibleFormatCharacters_removesThem() {
+        for (String invisible : INVISIBLE_FORMAT_CHARACTERS) {
+            Instrument instrument = new Instrument(invisible + "Fre" + invisible + "nch " + invisible + "Horn", 3);
+            assertEquals("French Horn", instrument.getName());
+        }
+    }
+
+    @Test
+    public void constructor_invisibleFormatCharactersOnly_throwsIllegalArgumentException() {
+        for (String invisible : INVISIBLE_FORMAT_CHARACTERS) {
+            assertFalse(Instrument.isValidName(invisible));
+            assertFalse(Instrument.isValidName(invisible + " " + invisible));
+            assertThrows(IllegalArgumentException.class,
+                    Instrument.MESSAGE_NAME_CONSTRAINTS, () -> new Instrument(invisible, 3));
+        }
+    }
+
+    @Test
+    public void hasDuplicateNames_nameWithInvisibleFormatCharacter_detectsDuplicate() {
+        Instrument piano = new Instrument("Piano", 3);
+        for (String invisible : INVISIBLE_FORMAT_CHARACTERS) {
+            String lookalike = "Pia" + invisible + "no";
+            assertTrue(piano.hasName(lookalike));
+            assertEquals(piano, new Instrument(lookalike, 3));
+            assertTrue(Instrument.hasDuplicateNames(List.of(piano, new Instrument(lookalike, 5))));
+        }
+    }
 
     @Test
     public void constructor_unicodeWhitespace_normalizesNameAndPreservesYears() {

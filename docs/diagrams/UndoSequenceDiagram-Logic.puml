@@ -57,7 +57,7 @@ end note
 loop count times (2 in this example)
     UndoCommand -> Model : undoAddressBook()
     activate Model
-    Model --> UndoCommand
+    Model --> UndoCommand : description
     deactivate Model
 end
 UndoCommand -> Model : updateFilteredPersonList(\nPREDICATE_SHOW_ALL_PERSONS)

@@ -4,6 +4,9 @@ import static java.util.Objects.requireNonNull;
 import static seedu.address.commons.util.AppUtil.checkArgument;
 import static seedu.address.model.Model.PREDICATE_SHOW_ALL_PERSONS;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import seedu.address.commons.util.ToStringBuilder;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.model.Model;
@@ -20,8 +23,9 @@ public class UndoCommand extends Command {
             + "Parameters: [COUNT] (number of changes to undo, a positive integer; default 1)\n"
             + "Example: " + COMMAND_WORD + " 2";
 
-    public static final String MESSAGE_SUCCESS = "Undid the most recent change.";
-    public static final String MESSAGE_SUCCESS_MULTIPLE = "Undid the %1$d most recent changes.";
+    public static final String MESSAGE_SUCCESS = "Undid the most recent change: %1$s";
+    public static final String MESSAGE_SUCCESS_MULTIPLE =
+            "Undid the %1$d most recent changes, most recent first:\n%2$s";
     public static final String MESSAGE_FAILURE = "There is no change to undo.";
     public static final String MESSAGE_NOT_ENOUGH_CHANGES = "Not enough changes to undo: only %1$d can be undone.";
 
@@ -52,11 +56,14 @@ public class UndoCommand extends Command {
         if (count > undoableCount) {
             throw new CommandException(String.format(MESSAGE_NOT_ENOUGH_CHANGES, undoableCount));
         }
+        List<String> descriptions = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            model.undoAddressBook();
+            descriptions.add(model.undoAddressBook());
         }
         model.updateFilteredPersonList(PREDICATE_SHOW_ALL_PERSONS);
-        return new CommandResult(count == 1 ? MESSAGE_SUCCESS : String.format(MESSAGE_SUCCESS_MULTIPLE, count));
+        return new CommandResult(count == 1
+                ? String.format(MESSAGE_SUCCESS, descriptions.get(0))
+                : String.format(MESSAGE_SUCCESS_MULTIPLE, count, String.join("\n", descriptions)));
     }
 
     @Override

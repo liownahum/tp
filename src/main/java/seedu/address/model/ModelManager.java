@@ -130,8 +130,8 @@ public class ModelManager implements Model {
     }
 
     @Override
-    public void undoAddressBook() {
-        addressBook.undo();
+    public String undoAddressBook() {
+        return addressBook.undo();
     }
 
     @Override
@@ -150,13 +150,13 @@ public class ModelManager implements Model {
     }
 
     @Override
-    public void redoAddressBook() {
-        addressBook.redo();
+    public String redoAddressBook() {
+        return addressBook.redo();
     }
 
     @Override
-    public void commitAddressBook() {
-        addressBook.commit();
+    public void commitAddressBook(String description) {
+        addressBook.commit(description);
     }
 
     @Override
