@@ -215,11 +215,10 @@ Format: `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [s/STATUS] [ty/TYPE] [r/
 * Edits the person at the specified `INDEX`. The index refers to the index number shown in the displayed person list. The index **must be a positive integer** 1, 2, 3, …​
 * At least one of the optional fields must be provided.
 * Existing values will be updated to the input values.
-* `s/STATUS` and `ty/TYPE` accept the same values as in `add`: `member`, `active-alumnus`, or `inactive-alumnus` for status, and `student` or `teacher` for type, ignoring case.
+* `s/STATUS` and `ty/TYPE` accept the same values as in `add`.
 * `r/ROLE` replaces the person's role. To remove the role, enter `r/` without a role after it.
 * If you edit the name or phone number and it then matches another member's name ignoring case, or their phone number, HiveMind shows a possible-duplicate warning for each such member, as `add` does, and still makes the edit.
 * Fields that are not specified are preserved. For example, editing a person's status keeps their contact details, type, role, instruments, and groups.
-* Instruments are preserved when they are not edited.
 * When editing instruments, all of the person's existing instruments are replaced; adding instruments is not cumulative.
 * To remove all of a person's instruments, enter `i/` without an instrument after it. Mixing an empty `i/` with named instruments is invalid.
 * When editing groups, all existing groups are replaced by the supplied `g/GROUP` values. To remove all groups, enter `g/` alone. Mixing an empty `g/` with named groups is invalid.
