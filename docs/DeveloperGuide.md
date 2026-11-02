@@ -939,7 +939,7 @@ Use a disposable directory for these checks, as they clear test data. Start with
    Expected: The feedback is `Opened help window.` A separate window shows the User Guide link.
 1. Select **Copy URL**, then paste into a browser.<br>
    Expected: The User Guide opens.
-1. Close the Help Window, then press `F1`. Close it again, then select **Help** in the menu bar.<br>
+1. Close the Help Window, then press `F1`. Close it again, then select **Help → Help** in the menu bar.<br>
    Expected: Each action opens the Help Window. Member records and the displayed list do not change.
 
 ### Deleting a person
