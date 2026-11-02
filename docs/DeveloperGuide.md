@@ -192,6 +192,10 @@ The `Storage` component,
 
 This loading rule applies only to saved JSON data. Command parsing rejects every group name that normalizes to empty. Loading does not rewrite the data file, and successfully loaded records remain editable and saveable. The next successful command requiring a save writes the directory without the skipped memberships.
 
+Before recovery backs up an unreadable address book, `JsonAddressBookStorage` verifies that its path is a regular file.
+If the path is a directory or another non-regular path, `backupAddressBook()` throws an `IOException`; `MainApp`
+reports that the backup could not be created, and no empty backup directory is created.
+
 ### Common classes
 
 Classes used by multiple components are in the `seedu.address.commons` package.
@@ -212,8 +216,8 @@ working directory for compatibility with Gradle and IDE launches.
 
 `LogsCenter` obtains its log path from `ApplicationPaths` during its initial static configuration, before the first
 application log entry can create a file. `MainApp` uses the same abstraction for preferences, member data and the
-imports directory. `ImportCommand` and `ExportCommand` use it for their default directories. Recovery backups remain
-beside the configured member-data file, so they are under the same application home. Tests can continue to pass
+imports directory. `ImportCommand` and `ExportCommand` use it for their default directories. Recovery backups, when
+created, remain beside the configured member-data file, so they are under the same application home. Tests can pass
 explicit temporary import and export directories to the commands, avoiding writes to the repository during unit and
 integration testing.
 
