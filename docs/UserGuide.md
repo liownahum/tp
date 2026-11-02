@@ -148,8 +148,9 @@ Imports people from a CSV file in the `imports` folder. The imported people are 
 
 Format: `import FILE_NAME`
 
-Place the CSV file in the `imports` folder inside HiveMind's home folder, then provide its file name, including the
-`.csv` extension. For example, use `import members.csv` for a file named `members.csv` in that folder.
+Place the CSV file in the `imports` folder inside HiveMind's home folder, then provide its file name rather than a path. The file name must include the `.csv` extension and be a valid Windows file name. It cannot contain the reserved characters `\`, `/`, `:`, `*`, `?`, `"`, `<`, `>` or `|`, contain control characters, end with a space or period, or use a reserved name such as `CON.csv` or `COM1.csv`. For example, use `import members.csv` for a file named `members.csv` in that folder.
+
+Save the file using UTF-8 encoding. For example, when using Microsoft Excel, select the **CSV UTF-8** format rather than the plain CSV format.
 
 The CSV file must have this exact header and column order:
 
@@ -160,12 +161,12 @@ name,phone,email,status,memberType,role,instruments,groups
 The default `export` command produces this format. Partial exports, or exports with all eight columns in a different order,
 cannot be imported. Use `export` without field selections when preparing a file for import.
 
-Each subsequent row must have exactly these eight columns:
+Each subsequent non-empty member row must have exactly these eight columns:
 
 * `name`, `phone`, and `email` follow the same validation rules as `add`.
 * `status` must be `member`, `active-alumnus`, or `inactive-alumnus`.
 * `memberType` must be `student` or `teacher`.
-* `role` and `groups` are optional. Represent an empty optional value with `""`.
+* `role`, `instruments`, and `groups` may be empty. An empty value can be represented using `""`.
 * List multiple instruments as `NAME:YEARS` values separated by semicolons, for example `Violin:8;Piano:5`.
 * List multiple groups separated by semicolons, for example `Orchestra;Leadership Team`.
 * Within an instrument or group name, write `\;` for a literal semicolon and `\\` for a literal backslash. `export` applies these escapes automatically.
@@ -178,7 +179,7 @@ name,phone,email,status,memberType,role,instruments,groups
 "Benjamin Lee","92345678","benjamin.lee@example.com","active-alumnus","teacher","","Cello:12",""
 ```
 
-If any row has invalid data, does not contain eight columns, or has the same recorded details as an existing member, the entire import fails and the directory remains unchanged. This prevents importing the same file twice from silently duplicating the directory. Identical rows within one CSV are imported as separate records with fresh IDs and produce a possible-duplicate warning, so a default export can restore such records after `clear`. Instrument and group names are compared ignoring case when identifying identical records.
+Blank lines and rows containing only empty fields are ignored, regardless of their number of columns. If any non-empty member row has invalid data, does not contain eight columns, or has the same recorded details as an existing member, the entire import fails and the directory remains unchanged. This prevents importing the same file twice from silently duplicating the directory. Identical rows within one CSV are imported as separate records with fresh IDs and produce a possible-duplicate warning, so a default export can restore such records after `clear`. Instrument and group names are compared ignoring case when identifying identical records.
 
 Example: `import members.csv`
 
