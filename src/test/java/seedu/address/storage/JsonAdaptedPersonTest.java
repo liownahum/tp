@@ -120,7 +120,8 @@ public class JsonAdaptedPersonTest {
 
     @Test
     public void toModelType_unicodeBlankInstrument_preservesPersonAndOtherInstruments() throws Exception {
-        for (String blank : List.of("\u00a0", "\u2007", "\u202f", "\u0085", " \u2002\u00a0\t")) {
+        for (String blank : List.of("\u00a0", "\u2007", "\u202f", "\u0085", " \u2002\u00a0\t", "\u200b",
+                "\ufeff \u200d")) {
             List<JsonAdaptedInstrument> instruments = List.of(
                     new JsonAdaptedInstrument(blank, 3), new JsonAdaptedInstrument("Cello", 5));
             JsonAdaptedPerson person = adaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL, instruments);
