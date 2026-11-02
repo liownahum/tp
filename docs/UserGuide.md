@@ -103,7 +103,7 @@ Command recall is separate from `undo` and `redo`: it recalls text and does not 
 
 ### Viewing help: `help`
 
-Shows a message explaining how to access the help page.
+Opens a window with a link to this User Guide. Select **Copy URL** to copy the link. You can also press `F1`.
 
 ![help message](images/helpMessage.png)
 
@@ -148,8 +148,9 @@ Imports people from a CSV file in the `imports` folder. The imported people are 
 
 Format: `import FILE_NAME`
 
-Place the CSV file in the `imports` folder inside HiveMind's home folder, then provide its file name, including the
-`.csv` extension. For example, use `import members.csv` for a file named `members.csv` in that folder.
+Place the CSV file in the `imports` folder inside HiveMind's home folder, then provide its file name rather than a path. The file name must include the `.csv` extension and be a valid Windows file name. It cannot contain the reserved characters `\`, `/`, `:`, `*`, `?`, `"`, `<`, `>` or `|`, contain control characters, end with a space or period, or use a reserved name such as `CON.csv` or `COM1.csv`. For example, use `import members.csv` for a file named `members.csv` in that folder.
+
+Save the file using UTF-8 encoding. For example, when using Microsoft Excel, select the **CSV UTF-8** format rather than the plain CSV format.
 
 The CSV file must have this exact header and column order:
 
@@ -160,12 +161,12 @@ name,phone,email,status,memberType,role,instruments,groups
 The default `export` command produces this format. Partial exports, or exports with all eight columns in a different order,
 cannot be imported. Use `export` without field selections when preparing a file for import.
 
-Each subsequent row must have exactly these eight columns:
+Each subsequent non-empty member row must have exactly these eight columns:
 
 * `name`, `phone`, and `email` follow the same validation rules as `add`.
 * `status` must be `member`, `active-alumnus`, or `inactive-alumnus`.
 * `memberType` must be `student` or `teacher`.
-* `role` and `groups` are optional. Represent an empty optional value with `""`.
+* `role`, `instruments`, and `groups` may be empty. An empty value can be represented using `""`.
 * List multiple instruments as `NAME:YEARS` values separated by semicolons, for example `Violin:8;Piano:5`.
 * List multiple groups separated by semicolons, for example `Orchestra;Leadership Team`.
 * Within an instrument or group name, write `\;` for a literal semicolon and `\\` for a literal backslash. `export` applies these escapes automatically.
@@ -178,7 +179,7 @@ name,phone,email,status,memberType,role,instruments,groups
 "Benjamin Lee","92345678","benjamin.lee@example.com","active-alumnus","teacher","","Cello:12",""
 ```
 
-If any row has invalid data, does not contain eight columns, or has the same recorded details as an existing member, the entire import fails and the directory remains unchanged. This prevents importing the same file twice from silently duplicating the directory. Identical rows within one CSV are imported as separate records with fresh IDs and produce a possible-duplicate warning, so a default export can restore such records after `clear`. Instrument and group names are compared ignoring case when identifying identical records.
+Blank lines and rows containing only empty fields are ignored, regardless of their number of columns. If any non-empty member row has invalid data, does not contain eight columns, or has the same recorded details as an existing member, the entire import fails and the directory remains unchanged. This prevents importing the same file twice from silently duplicating the directory. Identical rows within one CSV are imported as separate records with fresh IDs and produce a possible-duplicate warning, so a default export can restore such records after `clear`. Instrument and group names are compared ignoring case when identifying identical records.
 
 Example: `import members.csv`
 
@@ -214,13 +215,12 @@ Format: `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [s/STATUS] [ty/TYPE] [r/
 * Edits the person at the specified `INDEX`. The index refers to the index number shown in the displayed person list. The index **must be a positive integer** 1, 2, 3, …​
 * At least one of the optional fields must be provided.
 * Existing values will be updated to the input values.
-* `s/STATUS` and `ty/TYPE` accept the same values as in `add`: `member`, `active-alumnus`, or `inactive-alumnus` for status, and `student` or `teacher` for type, ignoring case.
+* `s/STATUS` and `ty/TYPE` accept the same values as in `add`.
 * `r/ROLE` replaces the person's role. To remove the role, enter `r/` without a role after it.
 * If you edit the name or phone number and it then matches another member's name ignoring case, or their phone number, HiveMind shows a possible-duplicate warning for each such member, as `add` does, and still makes the edit.
 * Fields that are not specified are preserved. For example, editing a person's status keeps their contact details, type, role, instruments, and groups.
-* Instruments are preserved when they are not edited.
 * When editing instruments, all of the person's existing instruments are replaced; adding instruments is not cumulative.
-* To remove all of a person's instruments, enter `i/` without an instrument after it.
+* To remove all of a person's instruments, enter `i/` without an instrument after it. Mixing an empty `i/` with named instruments is invalid.
 * When editing groups, all existing groups are replaced by the supplied `g/GROUP` values. To remove all groups, enter `g/` alone. Mixing an empty `g/` with named groups is invalid.
 * After an edit, the full member list is shown, even if the list was showing the results of `find` or `filter`. Run the `find` or `filter` command again to return to those results.
 
@@ -382,7 +382,7 @@ Format: `redo [COUNT]`
 * Changes are restored in the reverse order of undoing: the most recently undone change comes back first.
 * The result lists the command of each restored change as you typed it, in the order restored.
 * If fewer than `COUNT` undone changes can be restored, nothing is redone and HiveMind tells you how many can be, or that there is no undone change to redo.
-* Once you make a new change (e.g. `add`, `edit`, `delete`, `clear` or `import`) after an `undo`, the undone changes can no longer be redone. This also applies to an `edit` that leaves the member's details unchanged.
+* Once you make a new change (e.g. `add`, `edit`, `delete`, `clear` or `import`) after an `undo`, the undone changes can no longer be redone. This also applies to an `edit` that leaves the member's details unchanged, and to a `clear` when the list is already empty.
 * After a redo, the full member list is shown.
 
 Examples:
@@ -464,4 +464,5 @@ Action | Format, Examples
 **Undo** | `undo [COUNT]`<br> e.g., `undo 2`
 **Redo** | `redo [COUNT]`<br> e.g., `redo 2`
 **Help** | `help`
+**Exit** | `exit`
 **Import** | `import FILE_NAME`<br> e.g., `import members.csv`

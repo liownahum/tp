@@ -8,7 +8,7 @@ start
 'Since the beta syntax does not support placing the condition outside the
 'diamond we place it as the true branch instead.
 
-if () then ( [data saved and command\n  is not undo or redo])
+if () then ( [data saved and\n  command is not\n  undo or redo]\n )
     :Purge states after
     currentStatePointer;
     if () then ( [data changed])

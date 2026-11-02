@@ -14,6 +14,20 @@ title: Developer Guide
 * Runtime libraries: [JavaFX](https://openjfx.io/) for the interface and [Jackson](https://github.com/FasterXML/jackson) for JSON persistence. Tests use [JUnit 5](https://junit.org/junit5/).
 * Build, analysis and documentation tools include [Gradle](https://gradle.org/), [Shadow](https://gradleup.com/shadow/), [Checkstyle](https://checkstyle.org/), [JaCoCo](https://www.jacoco.org/), and [PlantUML](https://plantuml.com/). The website uses [Jekyll](https://jekyllrb.com/) with the [Minima theme](https://github.com/jekyll/minima).
 
+### AI assistance
+
+#### Fredrick CC (`L0pch`)
+
+I used OpenAI Codex as a development assistant throughout my work on HiveMind. Its assistance included exploring implementation approaches, generating and refining code and tests, debugging, preparing documentation and diagrams, and supporting PR reviews and release preparation.
+
+AI-assisted changes were checked through automated tests, code-style checks, packaged-application checks and teammate PR reviews. I remain responsible for the contributions submitted under my name.
+
+#### Irvin Tan Wei Jie (`irtan-cell`)
+
+While working on HiveMind, I used OpenAI Codex to explore possible solutions and help draft or improve code, tests, documentation, and PlantUML diagrams. I also used it when reviewing PRs to check changes against issue requirements and confirm that review comments had been addressed.
+
+I reviewed AI-assisted work and used the relevant tests or checks for each task before accepting it. I remain responsible for all contributions and review decisions submitted under my account.
+
 --------------------------------------------------------------------------------------------------------------------
 
 ## **Setting up, getting started**
@@ -107,7 +121,7 @@ On Windows PowerShell, set `$env:HIVEMIND_UI_TESTS = "true"` before running the 
 
 `PersonListPanel` observes the filtered and sorted person view exposed by `Logic`. Its list cells create a `PersonCard` for each displayed person, passing the cell's one-based index. When `find`, `filter`, `sort`, or `list` changes the displayed results, the list updates the cards and their indices. The existing UI class diagram shows this relationship; the card enhancement adds no new classes or dependencies.
 
-`PersonCard` loads `PersonListCard.fxml` through `UiPart`. The FXML `fx:id` attributes match the controller's `@FXML` fields. The constructor reads the person's public getters to populate the name, contact details, membership status, member type, optional role, and instruments. Type and status appear as text badges. `PersonCard.toDisplayText` capitalises the first character and replaces keyword hyphens with spaces for display (for example, `active-alumnus` becomes `Active alumnus`); model values, command keywords and storage remain unchanged. Card-specific styles in `DarkTheme.css` distinguish the name heading, contact details, secondary information and badges without changing the rest of the theme. Instrument labels use `Instrument.toDisplayString()` and are sorted by name, ignoring case.
+`PersonCard` loads `PersonListCard.fxml` through `UiPart`. The FXML injects display controls through the controller's `@FXML` fields; layout-only nodes retain identifiers for styling and tests. The constructor reads the person's public getters to populate the name, contact details, membership status, member type, optional role, and instruments. Type and status appear as text badges. `PersonCard.toDisplayText` capitalises the first character and replaces keyword hyphens with spaces for display (for example, `active-alumnus` becomes `Active alumnus`); model values, command keywords and storage remain unchanged. Card-specific styles in `DarkTheme.css` distinguish the name heading, contact details, secondary information and badges without changing the rest of the theme. Instrument labels use `Instrument.toDisplayString()` and are sorted by name, ignoring case.
 
 When no role is recorded, the role label has both `visible` and `managed` set to `false`: it is hidden and does not reserve layout space. Name, contact, and role labels allow text wrapping, while flow panes allow the membership details and instrument labels to move onto additional rows as space narrows. The email label and any recorded role also have full-text tooltips, with wrapping and a maximum width of 400 pixels, so clipped values remain accessible in narrow cards. These changes affect presentation only; the model and stored records are unchanged.
 
@@ -118,6 +132,10 @@ HIVEMIND_UI_TESTS=true ./gradlew test --tests seedu.address.ui.PersonCardTest --
 ```
 
 On Windows PowerShell, set `$env:HIVEMIND_UI_TESTS = "true"` and run `./gradlew.bat test --tests seedu.address.ui.PersonCardTest --rerun-tasks`. These tests do not replace visual checks for wrapping and scrolling; use the member-card scenarios in the manual-testing section below.
+
+The card's content `VBox` is a direct child of its outer `HBox`, so normal JavaFX sizing accounts for wrapping, CSS and selection borders without a cached height override. A recycled list cell can still be measured before its badges receive their actual width. `PersonListViewCell` therefore coalesces one deferred height check per cell after layout and requests another layout pass if the current row differs from its preferred height by more than one pixel. Replacing a card detaches its bounds listener and width binding.
+
+`PersonCardMacSizingTest` checks CSS changes at a fixed width, while `PersonListPanelSizingTest` checks content containment and adjacent rows through list transitions. `PersonListPanelPulseSizingTest` opens a real window with 200 members and allows layout pulses between scrolling, selection, resizing and adding a member. Run these checks with `HIVEMIND_UI_TESTS=true ./gradlew test --tests 'seedu.address.ui.*SizingTest'`. `PersonListPanelMacSpacingTest` remains a separate native macOS check; simulated platform names on Linux do not replace macOS testing.
 
 #### Empty member lists
 
@@ -170,7 +188,7 @@ How the parsing works:
 ### Model component
 **API** : [`Model.java`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/model/Model.java)
 
-<img src="images/ModelClassDiagram.png" width="600" />
+<img src="images/ModelClassDiagram.png" width="770" />
 
 
 The `Model` component,
@@ -185,7 +203,7 @@ The `Model` component,
 
 **API** : [`Storage.java`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/storage/Storage.java)
 
-<img src="images/StorageClassDiagram.png" width="550" />
+<img src="images/StorageClassDiagram.png" width="650" />
 
 The `Storage` component,
 * can save both address book data and user preference data in JSON format, and read them back into corresponding objects.
@@ -327,7 +345,7 @@ The following sequence diagram traces execution of a parsed `export f/name f/pho
 
 ### Importing people from CSV
 
-`AddressBookParser` routes `import FILE_NAME` to `ImportCommandParser`. The parser accepts a non-empty `.csv` file name without path separators, so `ImportCommand` always resolves it inside the `imports` directory.
+`AddressBookParser` routes `import FILE_NAME` to `ImportCommandParser`. The parser requires a non-empty `.csv` file name rather than a path and validates it with `FileUtil.isValidWindowsFileName`. This rejects reserved characters, control characters, names ending with a space or period, and reserved names such as `CON` and `COM1`, so `ImportCommand` resolves an accepted name against the `imports` directory.
 
 `ImportCommand` asks `CsvImporter.importPeopleWithLineNumbers` to read the entire CSV before changing the model. `CsvImporter` validates the required header and eight-column layout, then constructs `Person` objects using the existing model value objects such as `Name`, `Phone`, `Email`, `Status`, and `MemberType`. This reuses the application's validation rules instead of duplicating them in the CSV layer. It returns the complete imported list with each record's starting physical line number only when every row is valid, including records spanning multiple lines.
 
@@ -363,7 +381,7 @@ Step 2. The user executes `delete 5` command to delete the 5th person in the add
 
 ![UndoRedoState1](images/UndoRedoState1.png)
 
-Step 3. The user executes `add n/David …​` to add a new person. `LogicManager` executes the command and, after a successful save, calls `Model#commitAddressBook()`, causing another modified address book state to be saved into the `addressBookStateList`.
+Step 3. The user executes `add n/David …​` to add a new person. `LogicManager` executes the command and, after a successful save, calls `Model#commitAddressBook(description)`, causing another modified address book state to be saved into the `addressBookStateList`.
 
 ![UndoRedoState2](images/UndoRedoState2.png)
 
@@ -379,9 +397,13 @@ Step 4. The user now decides that adding the person was a mistake, and decides t
 
 </div>
 
-The following sequence diagram shows a successful `undo 2` operation through the `Logic` component. The command checks the available history before undoing either step, refreshes the full member list once, and saves once. It returns `false` from `recordsChange()`, so `LogicManager` does not commit a new history state. Model snapshots and save-failure rollback are omitted from the diagram; rollback is described in Step 3 above.
+The following sequence diagram shows how `undo 2` is parsed into an `UndoCommand`.
 
-![UndoSequenceDiagram](images/UndoSequenceDiagram-Logic.png)
+![Undo command parsing](images/UndoSequenceDiagram-Parsing.png)
+
+The next sequence diagram shows the successful `undo 2` operation through the `Logic` component, with parsing replaced by the `ref` frame. The command checks the available history before undoing either step, refreshes the full member list once, and saves once. It returns `false` from `recordsChange()`, so `LogicManager` does not commit a new history state. Model snapshots and save-failure rollback are omitted from the diagram; rollback is described in Step 3 above.
+
+![Undo command execution](images/UndoSequenceDiagram-Logic.png)
 
 The following diagram expands one successful `Model#undoAddressBook()` call. `VersionedAddressBook` checks `canUndo()`, decrements `currentStatePointer`, and restores the snapshot at that index. The Logic diagram repeats this model operation once per requested step; plain `undo` uses a count of 1, as in Step 4.
 
@@ -395,13 +417,13 @@ Both commands take an optional count, e.g. `undo 3`. `UndoCommandParser` and `Re
 
 </div>
 
-Step 5. The user then decides to execute the command `list`. `list` does not change data, so `LogicManager` returns its result without saving or calling `Model#commitAddressBook()`. Thus, the `addressBookStateList` remains unchanged.
+Step 5. The user then decides to execute the command `list`. `list` does not change data, so `LogicManager` returns its result without saving or calling `Model#commitAddressBook(description)`. Thus, the `addressBookStateList` remains unchanged.
 
 ![UndoRedoState4](images/UndoRedoState4.png)
 
-Step 6. The user executes `clear`. `LogicManager` executes the command and, after a successful save, calls `Model#commitAddressBook()`. Since the `currentStatePointer` is not pointing at the end of the `addressBookStateList`, all address book states after the `currentStatePointer` will be purged. Reason: it no longer makes sense to redo the `add n/David …​` command. This is the behavior that most modern desktop applications follow.
+Step 6. The user executes `clear`. `LogicManager` executes the command and, after a successful save, calls `Model#commitAddressBook(description)`. Since the `currentStatePointer` is not pointing at the end of the `addressBookStateList`, all address book states after the `currentStatePointer` will be purged. Reason: it no longer makes sense to redo the `add n/David …​` command. This is the behavior that most modern desktop applications follow.
 
-<div markdown="span" class="alert alert-info">:information_source: **Note:** The undone states are purged even if the command leaves the data unchanged (e.g. an `edit` that sets a field to its current value), because the user sees it reported as a new change. The undone states are kept only after commands that do not save data (e.g. `list`, as in Step 5) and after `undo` and `redo` themselves, which override `Command#recordsChange()` to return `false` so that `LogicManager` does not call `Model#commitAddressBook()` after them.
+<div markdown="span" class="alert alert-info">:information_source: **Note:** The undone states are purged even if the command leaves the data unchanged (e.g. an `edit` that sets a field to its current value), because the user sees it reported as a new change. The undone states are kept only after commands that do not save data (e.g. `list`, as in Step 5) and after `undo` and `redo` themselves, which override `Command#recordsChange()` to return `false` so that `LogicManager` does not call `Model#commitAddressBook(description)` after them.
 
 </div>
 
@@ -429,7 +451,7 @@ The following activity diagram summarizes what happens when a user executes a ne
   * Pros: Failed saves never enter the history; new data-changing commands are undoable without extra code.
   * Cons: Relies on `commit()` comparing states to skip unchanged data. The comparison uses `AddressBook#hasIdenticalData`, not `equals`, because `Instrument` and `Group` equality ignores case, which would hide a capitalisation-only edit. It also relies on `undo` and `redo` opting out through `Command#recordsChange()`.
 
-* **Alternative 2:** Each data-changing command calls `Model#commitAddressBook()` (the original AB3 proposal).
+* **Alternative 2:** Each data-changing command calls `Model#commitAddressBook(description)` (the original AB3 proposal).
   * Pros: Explicit.
   * Cons: Easy to forget in new commands; a change is recorded even if saving it fails.
 
@@ -660,7 +682,7 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 * **Mainstream OS**: Windows, Linux, Unix, or macOS.
 * **Member**: A person who currently belongs to the CCA. In HiveMind, _member_ is also used loosely to mean any person in the directory, including alumni and teachers.
 * **Participation group**: A group of members formed for a particular piece, activity or training programme (e.g., a group of new members under training).
-* **Possible duplicate**: A person being added whose name or phone number matches that of an existing record. HiveMind warns the user but still adds the person, since two different people can share a name or a phone number.
+* **Possible duplicate**: A person being added or edited whose name or phone number matches that of an existing record. HiveMind warns the user but still adds or edits the person, since two different people can share a name or a phone number.
 * **Prefix**: The short label before a parameter in a command (e.g., `n/` in `n/Tan Wei Ming`) that tells HiveMind which field the value belongs to.
 * **Role**: A position a person holds in the CCA (e.g., Section Leader, Conductor). Roles are free text, since each CCA names its roles differently.
 * **Status**: Whether a person is a _member_, an _active alumnus_ or an _inactive alumnus_ of the CCA.
@@ -681,19 +703,28 @@ testers are expected to do more *exploratory* testing.
 
 1. Initial launch
 
-   1. Download the JAR file and copy it into an empty folder.
+   1. Download the released `HiveMind.jar` and copy it into an empty writable folder.
 
-   1. Double-click the JAR file.<br>
+   1. Open a terminal in that folder and run `java -jar HiveMind.jar`.<br>
       Expected: The GUI opens with a set of sample contacts. The window size may not be optimal.
 
 1. Saving window preferences
 
    1. Resize the window to an optimal size. Move the window to a different location. Close the window.
 
-   1. Relaunch the app by double-clicking the JAR file.<br>
-       Expected: The most recent window size and location are retained.
+   1. From a terminal in the same folder, run `java -jar HiveMind.jar` again.<br>
+      Expected: The most recent window size and location are retained when they fit the current display's usable area. Otherwise, the window is resized and moved within that area.
 
-1. _{ more test cases …​ }_
+1. Restoring preferences after a display change
+
+   1. Set the display to 1280 × 720 at 150% scaling and launch HiveMind.<br>
+      Expected: The entire window fits within the usable screen area. The command box, feedback, member list and status bar remain visible. The window can be resized down to 450 × 400 logical pixels.
+
+   1. Close HiveMind after moving it to a secondary monitor. Disconnect that monitor and relaunch.<br>
+      Expected: The window returns to the primary display and fits its usable area.
+
+   1. With a secondary monitor connected, move HiveMind fully onto it, close and relaunch.<br>
+      Expected: A size and position that still fit are retained, including on monitors positioned to the left of the primary display.
 
 ### Checking command feedback
 
@@ -702,7 +733,7 @@ Use Java 25 and the released JAR in a fresh, disposable writable folder. Keep th
 1. Before entering a command, check that the feedback label is the neutral `Information` label.
 1. Run `list`.<br>
    Expected: A green `Success` label accompanies `Listed all persons.`
-1. Run `add` without parameters, then resize the window to its minimum 450 × 600.<br>
+1. Run `add` without parameters, then resize the window to its minimum 450 × 400.<br>
    Expected: A red `Error` label accompanies the invalid-format message and add usage. The text wraps within the feedback box; scroll vertically to read the complete usage. Select the text and check that it can be copied. No member is added.
 1. Run `list` again.<br>
    Expected: The label returns to green `Success`, the previous error is replaced, and the new feedback starts at the top of the box. The same sample records remain visible.
@@ -774,8 +805,10 @@ Use a disposable directory for these checks so the test records do not affect yo
    Expected: The name remains prominent and the membership badges remain readable without relying on colour. Text wraps without overlapping other fields, instrument labels flow onto additional rows, and all recorded details remain accessible. Check both full and empty optional fields again after scrolling.
 1. Run `add n/Test Member p/91234567 e/thisisaverylongemailaddressusedtotestoverflowinaction@example.com s/member r/percussion-section-leader-with-a-very-long-title`. Narrow the member list to about 350 pixels, then hover over the email and role in turn.<br>
    Expected: Each tooltip shows the complete field text, including the full email domain and the end of the role. Resize the window wider and narrower and repeat; the tooltips still show the full values. A member without a role still has no role row.
-1. Run `add n/Card Width p/91234567 e/music.coordinator.long.contact.address@example.com s/member r/Student Coordinator for the University Chamber Orchestra i/Historical Keyboard and String Instrument Ensemble Performance Specialisation:12 g/University Chamber Orchestra Alumni and Student Combined Performance Group`. Resize the window to its minimum 450 × 600, then widen and narrow it again.<br>
+1. Run `add n/Card Width p/91234567 e/music.coordinator.long.contact.address@example.com s/member r/Student Coordinator for the University Chamber Orchestra i/Historical Keyboard and String Instrument Ensemble Performance Specialisation:12 g/University Chamber Orchestra Alumni and Student Combined Performance Group`. Resize the window to its minimum 450 × 400, then widen and narrow it again.<br>
    Expected: The full instrument name and `12 yrs` remain readable on wrapped lines, as does the group name. Neither badge pushes contact details or other card content beyond the visible right edge. Scroll vertically if the card is taller than the available area.
+1. On macOS, scroll through the list in both directions without selecting a card. Add another member, repeatedly select different cards, then widen and narrow the window and scroll again.<br>
+   Expected: Every row fits its card, names display fully, and instrument and group labels neither overlap one another nor extend into the next row. Selecting a card does not hide a problem elsewhere in the list.
 
 ### Checking persistent member counts
 
@@ -791,7 +824,7 @@ Use Java 25 and the released JAR in a disposable writable folder. These steps cl
    Expected: An error is shown, and the count remains `Showing 0 of 2 members`.
 1. Run `list`, `delete 1`, `undo`, then `redo`.<br>
    Expected: The counts are `Showing 2 of 2 members`, `Showing 1 of 1 member`, `Showing 2 of 2 members`, and `Showing 1 of 1 member` respectively.
-1. Resize the window to its minimum 450 × 600.<br>
+1. Resize the window to its minimum 450 × 400.<br>
    Expected: The count remains readable above the member list, independently of the last command's feedback.
 
 ### Sorting displayed members
@@ -945,12 +978,38 @@ Use Java 25 and the released JAR in a disposable writable folder. These steps cl
    Expected: The list area starts with `No members yet.` and offers `add` and `help` guidance.
 1. Run `add n/Alice p/11111 e/alice@example.com s/member`.<br>
    Expected: Alice's card replaces the empty-directory guidance.
-1. Run `find Nobody`, then resize the window to its minimum 450 × 600.<br>
+1. Run `find Nobody`, then resize the window to its minimum 450 × 400.<br>
    Expected: The list area says `No matching members. Enter list to show everyone.` The entire message remains readable on wrapped lines, without a card being shown.
 1. Run `list`, then `filter s/inactive-alumnus`.<br>
    Expected: `list` restores Alice and hides the guidance; the filter shows the no-matching-members guidance again.
 1. Run `clear`, `undo`, then `redo`.<br>
    Expected: `clear` shows the empty-directory guidance, `undo` restores Alice with no guidance, and `redo` shows the empty-directory guidance again.
+
+### Editing status, type and role
+
+Use a disposable directory for these checks, as they clear test data. Start with `clear`.
+
+1. Run `add n/Mei Lin p/90000021 e/mei@example.com s/member r/Section Leader i/Violin:3 g/Orchestra`.<br>
+   Expected: The card shows the `Student` and `Member` badges, the role, the instrument and the group.
+1. Run `edit 1 s/active-alumnus ty/teacher`.<br>
+   Expected: The badges read `Teacher` and `Active alumnus`. The contact details, role, instrument and group are unchanged.
+1. Run `edit 1 s/Inactive-Alumnus ty/STUDENT`.<br>
+   Expected: The badges read `Student` and `Inactive alumnus`, as these values ignore case.
+1. Run `edit 1 r/`.<br>
+   Expected: The role is removed, leaving no blank row on the card.
+1. Run `edit 1 s/former`, `edit 1 ty/parent`, then `edit 1`.<br>
+   Expected: Each command fails and the card is unchanged. The errors are `Status should be member, active-alumnus, or inactive-alumnus`, `Member type should be student or teacher` and `At least one field to edit must be provided.`
+1. Run `undo`.<br>
+   Expected: `Section Leader` returns, as the failed commands are not changes to undo.
+
+### Opening help
+
+1. Run `help`.<br>
+   Expected: The feedback is `Opened help window.` A separate window shows the User Guide link.
+1. Select **Copy URL**, then paste into a browser.<br>
+   Expected: The User Guide opens.
+1. Close the Help Window, then press `F1`. Close it again, then select **Help → Help** in the menu bar.<br>
+   Expected: Each action opens the Help Window. Member records and the displayed list do not change.
 
 ### Deleting a person
 
@@ -966,8 +1025,6 @@ Use Java 25 and the released JAR in a disposable writable folder. These steps cl
 
    1. Other incorrect delete commands to try: `delete`, `delete x`, `...` (where x is larger than the list size)<br>
       Expected: Similar to previous.
-
-1. _{ more test cases …​ }_
 
 ### Undoing and redoing changes
 

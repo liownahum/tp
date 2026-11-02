@@ -1,15 +1,18 @@
 package seedu.address.ui;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.logging.Logger;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import seedu.address.commons.core.GuiSettings;
 import seedu.address.commons.core.LogsCenter;
@@ -128,15 +131,22 @@ public class MainWindow extends UiPart<Stage> {
     }
 
     /**
-     * Sets the default size based on {@code guiSettings}.
+     * Restores saved geometry within the visual bounds of a current display.
      */
     private void setWindowDefaultSize(GuiSettings guiSettings) {
-        primaryStage.setHeight(guiSettings.getWindowHeight());
-        primaryStage.setWidth(guiSettings.getWindowWidth());
-        if (guiSettings.getWindowCoordinates() != null) {
-            primaryStage.setX(guiSettings.getWindowCoordinates().getX());
-            primaryStage.setY(guiSettings.getWindowCoordinates().getY());
-        }
+        List<WindowGeometry.ScreenBounds> screens = Screen.getScreens().stream()
+                .map(screen -> new WindowGeometry.ScreenBounds(screen.getBounds(), screen.getVisualBounds()))
+                .toList();
+        Screen primary = Screen.getPrimary();
+        Rectangle2D bounds = WindowGeometry.fit(guiSettings, screens,
+                new WindowGeometry.ScreenBounds(primary.getBounds(), primary.getVisualBounds()),
+                primaryStage.getMinWidth(), primaryStage.getMinHeight());
+        primaryStage.setMinWidth(Math.min(primaryStage.getMinWidth(), bounds.getWidth()));
+        primaryStage.setMinHeight(Math.min(primaryStage.getMinHeight(), bounds.getHeight()));
+        primaryStage.setWidth(bounds.getWidth());
+        primaryStage.setHeight(bounds.getHeight());
+        primaryStage.setX(bounds.getMinX());
+        primaryStage.setY(bounds.getMinY());
     }
 
     /**
