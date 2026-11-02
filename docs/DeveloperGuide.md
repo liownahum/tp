@@ -14,6 +14,14 @@ title: Developer Guide
 * Runtime libraries: [JavaFX](https://openjfx.io/) for the interface and [Jackson](https://github.com/FasterXML/jackson) for JSON persistence. Tests use [JUnit 5](https://junit.org/junit5/).
 * Build, analysis and documentation tools include [Gradle](https://gradle.org/), [Shadow](https://gradleup.com/shadow/), [Checkstyle](https://checkstyle.org/), [JaCoCo](https://www.jacoco.org/), and [PlantUML](https://plantuml.com/). The website uses [Jekyll](https://jekyllrb.com/) with the [Minima theme](https://github.com/jekyll/minima).
 
+### AI assistance
+
+#### Fredrick CC (`L0pch`)
+
+I used OpenAI Codex as a development assistant throughout my work on HiveMind. Its assistance included exploring implementation approaches, generating and refining code and tests, debugging, preparing documentation and diagrams, and supporting PR reviews and release preparation.
+
+AI-assisted changes were checked through automated tests, code-style checks, packaged-application checks and teammate PR reviews. I remain responsible for the contributions submitted under my name.
+
 --------------------------------------------------------------------------------------------------------------------
 
 ## **Setting up, getting started**
