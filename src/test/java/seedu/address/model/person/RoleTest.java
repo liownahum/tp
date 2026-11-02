@@ -7,7 +7,25 @@ import static seedu.address.testutil.Assert.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
+/** Verifies role normalization without changing case-sensitive stored role equality. */
 public class RoleTest {
+
+    @Test
+    public void constructor_invisibleOnlyRole_rejectsBlankRole() {
+        for (String invisible : new String[]{"\u200b", "\u200c", "\u200d", "\u2060", "\ufeff", "\udb40\udc01"}) {
+            assertFalse(Role.isValidRole(" " + invisible + "\u00a0"));
+            assertThrows(IllegalArgumentException.class, Role.MESSAGE_CONSTRAINTS, ()
+                -> new Role(" " + invisible + "\u00a0"));
+        }
+    }
+
+    @Test
+    public void normalize_invisibleCharacters_preservesVisibleTextAndCase() {
+        assertEquals("Vice President", new Role("\ufeffVi\u200bce\u00a0\u2060 President\u200d").value);
+        assertEquals(new Role("Vice President"), new Role("Vi\u200bce President"));
+        assertEquals(new Role("Vice President").hashCode(), new Role("Vice Pre\u200csident").hashCode());
+        assertFalse(new Role("Vice President").equals(new Role("vice president")));
+    }
 
     @Test
     public void constructor_null_throwsNullPointerException() {

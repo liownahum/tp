@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 /**
  * Represents a person's free-text role in HiveMind.
- * Surrounding whitespace is removed and runs of internal whitespace are collapsed to a single space,
+ * Invisible format characters and surrounding whitespace are removed; internal whitespace becomes a single space,
  * so e.g. "Vice   President" is stored and compared as "Vice President".
  * Guarantees: immutable; is valid as declared in {@link #isValidRole(String)}.
  */
@@ -33,12 +33,12 @@ public class Role {
     }
 
     /**
-     * Returns the given role with every run of Unicode whitespace replaced by a single ASCII space,
+     * Returns the given role with invisible format characters removed and Unicode whitespace collapsed to one space,
      * and any leading or trailing spaces stripped.
      */
     public static String normalize(String role) {
         requireNonNull(role);
-        return WHITESPACE.matcher(role).replaceAll(" ").trim();
+        return WHITESPACE.matcher(role.replaceAll("\\p{Cf}", "")).replaceAll(" ").trim();
     }
 
     /**
