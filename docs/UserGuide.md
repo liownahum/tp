@@ -197,7 +197,7 @@ Each member card displays:
 * Recorded instruments and their years of experience, sorted alphabetically by instrument name, ignoring case. For example, `Piano (5 yrs)` and `Violin (1 yr)`. No instrument labels appear when none are recorded.
 * A `Groups:` heading with one badge per participation group, ordered alphabetically ignoring case. No groups section is shown when none are recorded.
 
-Long names, contact details, roles, instruments and groups wrap as the window narrows. Scroll down to see details or members below the visible area.
+Long names, contact details, roles, instruments and groups wrap as the window narrows. If an email or role is cut off, hover over that field to see its complete text in a tooltip. Scroll down to see details or members below the visible area.
 
 The same card details are shown in `find` and `filter` results. Displayed indices start at `1` and refer to the current list, so a member's index may change after a search, filter or sort. Use the current displayed index for commands such as `edit` and `delete`.
 
