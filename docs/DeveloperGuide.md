@@ -678,19 +678,17 @@ testers are expected to do more *exploratory* testing.
 
 1. Initial launch
 
-   1. Download the JAR file and copy it into an empty folder.
+   1. Download the released `HiveMind.jar` and copy it into an empty writable folder.
 
-   1. Double-click the JAR file.<br>
+   1. Open a terminal in that folder and run `java -jar HiveMind.jar`.<br>
       Expected: The GUI opens with a set of sample contacts. The window size may not be optimal.
 
 1. Saving window preferences
 
    1. Resize the window to an optimal size. Move the window to a different location. Close the window.
 
-   1. Relaunch the app by double-clicking the JAR file.<br>
-       Expected: The most recent window size and location are retained.
-
-1. _{ more test cases …​ }_
+   1. From a terminal in the same folder, run `java -jar HiveMind.jar` again.<br>
+      Expected: The most recent window size and location are retained.
 
 ### Checking command feedback
 
@@ -963,8 +961,6 @@ Use Java 25 and the released JAR in a disposable writable folder. These steps cl
 
    1. Other incorrect delete commands to try: `delete`, `delete x`, `...` (where x is larger than the list size)<br>
       Expected: Similar to previous.
-
-1. _{ more test cases …​ }_
 
 ### Undoing and redoing changes
 
