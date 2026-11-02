@@ -86,8 +86,10 @@ public interface Model {
 
     /**
      * Reverts the most recent change to the address book.
+     *
+     * @return the description of the reverted change, as given to {@link #commitAddressBook(String)}.
      */
-    void undoAddressBook();
+    String undoAddressBook();
 
     /**
      * Returns the number of changes that {@link #undoAddressBook()} can revert one after another.
@@ -106,14 +108,18 @@ public interface Model {
 
     /**
      * Restores the most recently undone change to the address book.
+     *
+     * @return the description of the restored change, as given to {@link #commitAddressBook(String)}.
      */
-    void redoAddressBook();
+    String redoAddressBook();
 
     /**
      * Records the current address book state so that the change leading to it can be undone.
      * Undone changes can no longer be redone afterwards, even if the address book is unchanged.
+     *
+     * @param description the change that led to the current state, reported by undo and redo.
      */
-    void commitAddressBook();
+    void commitAddressBook(String description);
 
     /**
      * Returns the position of the current state in the address book's undo history.

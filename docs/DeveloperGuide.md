@@ -325,15 +325,15 @@ The following sequence diagram focuses on a successful `ImportCommand.execute(..
 
 #### Implementation
 
-The undo/redo mechanism is facilitated by `VersionedAddressBook`. It extends `AddressBook` with an undo/redo history, stored internally as an `addressBookStateList` and `currentStatePointer`. Additionally, it implements the following operations:
+The undo/redo mechanism is facilitated by `VersionedAddressBook`. It extends `AddressBook` with an undo/redo history, stored internally as an `addressBookStateList` and `currentStatePointer`. A parallel `changeDescriptionList` holds the command text that led to each state, so that `undo` and `redo` can tell the user which changes they reverted or restored. Additionally, it implements the following operations:
 
-* `VersionedAddressBook#commit()` — Discards any undone states, then records the current address book state in its history, unless the data is unchanged.
-* `VersionedAddressBook#undo()` — Reverts the most recent change by restoring an earlier state from its history.
-* `VersionedAddressBook#redo()` — Restores the most recently undone state from its history.
+* `VersionedAddressBook#commit(description)` — Discards any undone states, then records the current address book state and the description of the change that led to it, unless the data is unchanged.
+* `VersionedAddressBook#undo()` — Reverts the most recent change by restoring an earlier state from its history, and returns that change's description.
+* `VersionedAddressBook#redo()` — Restores the most recently undone state from its history, and returns that change's description.
 * `VersionedAddressBook#canUndo()` and `VersionedAddressBook#canRedo()` — Return whether there is a change to revert or restore.
 * `VersionedAddressBook#getUndoableCount()` and `VersionedAddressBook#getRedoableCount()` — Return how many changes can be reverted or restored one after another.
 
-These operations are exposed in the `Model` interface as `Model#commitAddressBook()`, `Model#undoAddressBook()`, `Model#redoAddressBook()`, `Model#canUndoAddressBook()`, `Model#canRedoAddressBook()`, `Model#getUndoableChangeCount()` and `Model#getRedoableChangeCount()` respectively.
+These operations are exposed in the `Model` interface as `Model#commitAddressBook(description)`, `Model#undoAddressBook()`, `Model#redoAddressBook()`, `Model#canUndoAddressBook()`, `Model#canRedoAddressBook()`, `Model#getUndoableChangeCount()` and `Model#getRedoableChangeCount()` respectively.
 
 Given below is an example usage scenario and how the undo/redo mechanism behaves at each step.
 
@@ -341,7 +341,7 @@ Step 1. The user launches the application for the first time. The `VersionedAddr
 
 ![UndoRedoState0](images/UndoRedoState0.png)
 
-Step 2. The user executes `delete 5` command to delete the 5th person in the address book. `LogicManager` executes the command and, after the address book is saved to storage successfully, calls `Model#commitAddressBook()`, causing the modified state of the address book to be saved in the `addressBookStateList`, and the `currentStatePointer` is shifted to the newly inserted address book state.
+Step 2. The user executes `delete 5` command to delete the 5th person in the address book. `LogicManager` executes the command and, after the address book is saved to storage successfully, calls `Model#commitAddressBook("delete 5")` with the command text, causing the modified state of the address book to be saved in the `addressBookStateList`, and the `currentStatePointer` is shifted to the newly inserted address book state.
 
 ![UndoRedoState1](images/UndoRedoState1.png)
 
@@ -353,7 +353,7 @@ Step 3. The user executes `add n/David …​` to add a new person. `LogicManage
 
 </div>
 
-Step 4. The user now decides that adding the person was a mistake, and decides to undo that action by executing the `undo` command. The `undo` command calls `Model#undoAddressBook()`, which shifts the `currentStatePointer` once to the left, pointing it to the previous address book state, and restores the address book to that state. The full member list is then shown.
+Step 4. The user now decides that adding the person was a mistake, and decides to undo that action by executing the `undo` command. The `undo` command calls `Model#undoAddressBook()`, which shifts the `currentStatePointer` once to the left, pointing it to the previous address book state, and restores the address book to that state. It returns the description of the reverted change, so the result is `Undid the most recent change: add n/David …​`. The full member list is then shown.
 
 ![UndoRedoState3](images/UndoRedoState3.png)
 
@@ -938,9 +938,9 @@ Use Java 25 and the released JAR in a disposable writable folder. These steps cl
 Start from the sample data in a disposable directory (delete `data/addressbook.json` before launching).
 
 1. Run `delete 1`, then `delete 1` again, then `undo 2`.<br>
-   Expected: `Undid the 2 most recent changes.` Alex Yeoh and Bernice Yu are back, and the full list is shown.
+   Expected: `Undid the 2 most recent changes, most recent first:` followed by `delete 1` on each of the next two lines. Alex Yeoh and Bernice Yu are back, and the full list is shown.
 1. Run `redo`, then `redo 1`.<br>
-   Expected: The first `redo` deletes Alex Yeoh again (the most recently undone change); the second deletes Bernice Yu again.
+   Expected: The first `redo` deletes Alex Yeoh again (the most recently undone change) and shows `Redid the most recently undone change: delete 1`; the second deletes Bernice Yu again.
 1. Run `undo 5`.<br>
    Expected: `Not enough changes to undo: only 2 can be undone.` Nothing changes.
 1. Run `undo 0`, `undo -1`, `undo two` and `undo 1 2`.<br>

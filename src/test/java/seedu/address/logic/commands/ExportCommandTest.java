@@ -148,9 +148,9 @@ public class ExportCommandTest {
     @Test
     public void execute_preservesRecordsDisplayedResultsAndUndoRedoHistory() throws Exception {
         model.addPerson(HOON);
-        model.commitAddressBook();
+        model.commitAddressBook("add Hoon");
         model.addPerson(IDA);
-        model.commitAddressBook();
+        model.commitAddressBook("add Ida");
         model.undoAddressBook();
         AddressBookParser parser = new AddressBookParser();
         parser.parseCommand("find Meier").execute(model);

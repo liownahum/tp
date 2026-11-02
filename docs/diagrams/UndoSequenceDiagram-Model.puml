@@ -17,15 +17,17 @@ activate VersionedAddressBook
 VersionedAddressBook --> VersionedAddressBook : true
 deactivate VersionedAddressBook
 note right of VersionedAddressBook
+description = changeDescriptionList
+.get(currentStatePointer)
 currentStatePointer--
 end note
 VersionedAddressBook -> VersionedAddressBook : resetData(addressBookStateList\n.get(currentStatePointer))
 activate VersionedAddressBook
 VersionedAddressBook --> VersionedAddressBook
 deactivate VersionedAddressBook
-VersionedAddressBook --> Model
+VersionedAddressBook --> Model : description
 deactivate VersionedAddressBook
-[<-- Model
+[<-- Model : description
 deactivate Model
 
 legend bottom

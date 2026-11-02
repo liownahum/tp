@@ -4,6 +4,9 @@ import static java.util.Objects.requireNonNull;
 import static seedu.address.commons.util.AppUtil.checkArgument;
 import static seedu.address.model.Model.PREDICATE_SHOW_ALL_PERSONS;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import seedu.address.commons.util.ToStringBuilder;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.model.Model;
@@ -20,8 +23,9 @@ public class RedoCommand extends Command {
             + "Parameters: [COUNT] (number of changes to redo, a positive integer; default 1)\n"
             + "Example: " + COMMAND_WORD + " 2";
 
-    public static final String MESSAGE_SUCCESS = "Redid the most recently undone change.";
-    public static final String MESSAGE_SUCCESS_MULTIPLE = "Redid the %1$d most recently undone changes.";
+    public static final String MESSAGE_SUCCESS = "Redid the most recently undone change: %1$s";
+    public static final String MESSAGE_SUCCESS_MULTIPLE =
+            "Redid the %1$d most recently undone changes, in the order redone:\n%2$s";
     public static final String MESSAGE_FAILURE = "There is no undone change to redo.";
     public static final String MESSAGE_NOT_ENOUGH_CHANGES =
             "Not enough undone changes to redo: only %1$d can be redone.";
@@ -53,11 +57,14 @@ public class RedoCommand extends Command {
         if (count > redoableCount) {
             throw new CommandException(String.format(MESSAGE_NOT_ENOUGH_CHANGES, redoableCount));
         }
+        List<String> descriptions = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            model.redoAddressBook();
+            descriptions.add(model.redoAddressBook());
         }
         model.updateFilteredPersonList(PREDICATE_SHOW_ALL_PERSONS);
-        return new CommandResult(count == 1 ? MESSAGE_SUCCESS : String.format(MESSAGE_SUCCESS_MULTIPLE, count));
+        return new CommandResult(count == 1
+                ? String.format(MESSAGE_SUCCESS, descriptions.get(0))
+                : String.format(MESSAGE_SUCCESS_MULTIPLE, count, String.join("\n", descriptions)));
     }
 
     @Override

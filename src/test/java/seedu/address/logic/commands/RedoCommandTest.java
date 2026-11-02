@@ -29,12 +29,13 @@ public class RedoCommandTest {
         Model model = new ModelManager(getTypicalAddressBook(), new UserPrefs());
         Person zed = new PersonBuilder().withName("Zed").build();
         model.addPerson(zed);
-        model.commitAddressBook();
+        model.commitAddressBook("add Zed");
         model.undoAddressBook();
 
         Model expectedModel = new ModelManager(getTypicalAddressBook(), new UserPrefs());
         expectedModel.addPerson(zed);
-        assertCommandSuccess(new RedoCommand(), model, RedoCommand.MESSAGE_SUCCESS, expectedModel);
+        assertCommandSuccess(new RedoCommand(), model,
+                String.format(RedoCommand.MESSAGE_SUCCESS, "add Zed"), expectedModel);
     }
 
     @Test
@@ -42,10 +43,10 @@ public class RedoCommandTest {
         Model model = new ModelManager(getTypicalAddressBook(), new UserPrefs());
         Person zed = new PersonBuilder().withName("Zed").build();
         model.addPerson(zed);
-        model.commitAddressBook();
+        model.commitAddressBook("add Zed");
         model.undoAddressBook();
         model.addPerson(new PersonBuilder().withName("Yan").build());
-        model.commitAddressBook();
+        model.commitAddressBook("add Yan");
 
         assertCommandFailure(new RedoCommand(), model, RedoCommand.MESSAGE_FAILURE);
     }
@@ -58,7 +59,7 @@ public class RedoCommandTest {
         expectedModel.addPerson(new PersonBuilder().withName("Zed").build());
         expectedModel.addPerson(new PersonBuilder().withName("Yan").build());
         assertCommandSuccess(new RedoCommand(2), model,
-                String.format(RedoCommand.MESSAGE_SUCCESS_MULTIPLE, 2), expectedModel);
+                String.format(RedoCommand.MESSAGE_SUCCESS_MULTIPLE, 2, "add Zed\nadd Yan"), expectedModel);
         assertEquals(1, model.getRedoableChangeCount());
     }
 
@@ -105,7 +106,7 @@ public class RedoCommandTest {
         Model model = new ModelManager(getTypicalAddressBook(), new UserPrefs());
         for (String name : names) {
             model.addPerson(new PersonBuilder().withName(name).build());
-            model.commitAddressBook();
+            model.commitAddressBook("add " + name);
         }
         for (int i = 0; i < names.length; i++) {
             model.undoAddressBook();

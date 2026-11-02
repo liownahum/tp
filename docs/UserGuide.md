@@ -368,6 +368,7 @@ Reverts the most recent changes made by `add`, `edit`, `delete`, `clear` or `imp
 Format: `undo [COUNT]`
 
 * Reverts the `COUNT` most recent changes, most recent first. Without `COUNT`, only the most recent change is reverted.
+* The result lists the command of each reverted change as you typed it, most recent first. For example, after `delete 1` and then `delete 3`, `undo 2` shows `delete 3`, then `delete 1`.
 * `COUNT` must be a positive integer, e.g. 1, 2, 3, …​
 * You can undo changes back to when HiveMind was started. If fewer than `COUNT` changes can be undone, nothing is undone and HiveMind tells you how many can be, or that there is no change to undo.
 * Commands that do not change data (e.g. `list`, `find`, `filter`, `sort`, `export`) are not undone.
@@ -387,6 +388,7 @@ Format: `redo [COUNT]`
 * Restores the `COUNT` most recently undone changes. Without `COUNT`, only the most recently undone change is restored.
 * `COUNT` must be a positive integer, e.g. 1, 2, 3, …​
 * Changes are restored in the reverse order of undoing: the most recently undone change comes back first.
+* The result lists the command of each restored change as you typed it, in the order restored.
 * If fewer than `COUNT` undone changes can be restored, nothing is redone and HiveMind tells you how many can be, or that there is no undone change to redo.
 * Once you make a new change (e.g. `add`, `edit`, `delete`, `clear` or `import`) after an `undo`, the undone changes can no longer be redone. This also applies to an `edit` that leaves the member's details unchanged.
 * After a redo, the full member list is shown.

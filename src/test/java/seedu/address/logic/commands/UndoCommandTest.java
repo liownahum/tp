@@ -28,21 +28,23 @@ public class UndoCommandTest {
     public void execute_afterCommittedChange_success() {
         Model model = new ModelManager(getTypicalAddressBook(), new UserPrefs());
         model.addPerson(new PersonBuilder().withName("Zed").build());
-        model.commitAddressBook();
+        model.commitAddressBook("add Zed");
 
         Model expectedModel = new ModelManager(getTypicalAddressBook(), new UserPrefs());
-        assertCommandSuccess(new UndoCommand(), model, UndoCommand.MESSAGE_SUCCESS, expectedModel);
+        assertCommandSuccess(new UndoCommand(), model,
+                String.format(UndoCommand.MESSAGE_SUCCESS, "add Zed"), expectedModel);
     }
 
     @Test
     public void execute_afterFilteredList_showsAllPersons() {
         Model model = new ModelManager(getTypicalAddressBook(), new UserPrefs());
         model.addPerson(new PersonBuilder().withName("Zed").build());
-        model.commitAddressBook();
+        model.commitAddressBook("add Zed");
         model.updateFilteredPersonList(person -> false);
 
         Model expectedModel = new ModelManager(getTypicalAddressBook(), new UserPrefs());
-        assertCommandSuccess(new UndoCommand(), model, UndoCommand.MESSAGE_SUCCESS, expectedModel);
+        assertCommandSuccess(new UndoCommand(), model,
+                String.format(UndoCommand.MESSAGE_SUCCESS, "add Zed"), expectedModel);
     }
 
     @Test
@@ -52,7 +54,7 @@ public class UndoCommandTest {
         Model expectedModel = new ModelManager(getTypicalAddressBook(), new UserPrefs());
         expectedModel.addPerson(new PersonBuilder().withName("Zed").build());
         assertCommandSuccess(new UndoCommand(2), model,
-                String.format(UndoCommand.MESSAGE_SUCCESS_MULTIPLE, 2), expectedModel);
+                String.format(UndoCommand.MESSAGE_SUCCESS_MULTIPLE, 2, "add Xia\nadd Yan"), expectedModel);
         assertEquals(1, model.getUndoableChangeCount());
         assertEquals(2, model.getRedoableChangeCount());
     }
@@ -63,7 +65,7 @@ public class UndoCommandTest {
 
         Model expectedModel = new ModelManager(getTypicalAddressBook(), new UserPrefs());
         assertCommandSuccess(new UndoCommand(2), model,
-                String.format(UndoCommand.MESSAGE_SUCCESS_MULTIPLE, 2), expectedModel);
+                String.format(UndoCommand.MESSAGE_SUCCESS_MULTIPLE, 2, "add Yan\nadd Zed"), expectedModel);
         assertFalse(model.canUndoAddressBook());
     }
 
@@ -118,7 +120,7 @@ public class UndoCommandTest {
         for (String name : names) {
             Person person = new PersonBuilder().withName(name).build();
             model.addPerson(person);
-            model.commitAddressBook();
+            model.commitAddressBook("add " + name);
         }
         return model;
     }
