@@ -2,6 +2,7 @@ package seedu.address.storage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.testutil.TypicalPersons.DANIEL;
@@ -9,7 +10,14 @@ import static seedu.address.testutil.TypicalPersons.DANIEL;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.AbstractList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -19,6 +27,8 @@ import seedu.address.model.person.Person;
 import seedu.address.testutil.PersonBuilder;
 
 public class CsvExporterTest {
+    private static final int CONCURRENT_EXPORT_TIMEOUT_SECONDS = 10;
+
     @TempDir
     public Path testFolder;
 
@@ -34,6 +44,7 @@ public class CsvExporterTest {
                 "\"Daniel Meier\",\"87652533\",\"cornelia@example.com\","
                         + "\"member\",\"teacher\",\"Conductor\",\"Violin:20\",\"\""),
                 Files.readString(outputPath));
+        assertFalse(Files.exists(testFolder.resolve(".current-results-01.csv.reserve")));
     }
 
     @Test
@@ -96,6 +107,46 @@ public class CsvExporterTest {
 
         assertEquals(secondExport, returnedPath);
         assertEquals("existing export", Files.readString(firstExport));
+    }
+
+    @Test
+    public void export_existingReservation_preservesReservationAndUsesNextNumber() throws Exception {
+        Path firstReservation = testFolder.resolve(".current-results-01.csv.reserve");
+        Files.createFile(firstReservation);
+
+        Path returnedPath = CsvExporter.export(List.of(DANIEL), testFolder);
+
+        assertEquals(testFolder.resolve("current-results-02.csv"), returnedPath);
+        assertTrue(Files.exists(firstReservation));
+        assertFalse(Files.exists(testFolder.resolve(".current-results-02.csv.reserve")));
+    }
+
+    @Test
+    public void export_concurrentExports_useDistinctPathsAndPreserveBothResults() throws Exception {
+        CountDownLatch exportsReady = new CountDownLatch(2);
+        Person amy = new PersonBuilder().build();
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            Future<Path> danielExport = executor.submit(() -> CsvExporter.export(
+                    waitForBothExports(DANIEL, exportsReady), testFolder, List.of(ExportField.NAME)));
+            Future<Path> amyExport = executor.submit(() -> CsvExporter.export(
+                    waitForBothExports(amy, exportsReady), testFolder, List.of(ExportField.NAME)));
+
+            Path danielPath = danielExport.get(CONCURRENT_EXPORT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            Path amyPath = amyExport.get(CONCURRENT_EXPORT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+            assertNotEquals(danielPath, amyPath);
+            assertEquals(Set.of(testFolder.resolve("current-results-01.csv"),
+                    testFolder.resolve("current-results-02.csv")), Set.of(danielPath, amyPath));
+            assertEquals(Set.of(
+                    String.join(System.lineSeparator(), "name", "\"Daniel Meier\""),
+                    String.join(System.lineSeparator(), "name", "\"Amy Bee\"")),
+                    Set.of(Files.readString(danielPath), Files.readString(amyPath)));
+        } finally {
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(CONCURRENT_EXPORT_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+        }
     }
 
     @Test
@@ -232,5 +283,26 @@ public class CsvExporterTest {
         assertEquals(testFolder.resolve("current-results-02.csv"), outputPath);
         assertEquals("existing export", Files.readString(firstExport));
         assertEquals(String.join(System.lineSeparator(), "name", "\"Daniel Meier\""), Files.readString(outputPath));
+    }
+
+    private List<Person> waitForBothExports(Person person, CountDownLatch exportsReady) {
+        return new AbstractList<>() {
+            @Override
+            public Person get(int index) {
+                exportsReady.countDown();
+                try {
+                    assertTrue(exportsReady.await(CONCURRENT_EXPORT_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(e);
+                }
+                return List.of(person).get(index);
+            }
+
+            @Override
+            public int size() {
+                return 1;
+            }
+        };
     }
 }
