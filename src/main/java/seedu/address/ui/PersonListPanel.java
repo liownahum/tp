@@ -4,6 +4,8 @@ import static seedu.address.commons.util.CollectionUtil.requireAllNonNull;
 
 import java.util.logging.Logger;
 
+import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
 import javafx.beans.binding.Bindings;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -59,6 +61,9 @@ public class PersonListPanel extends UiPart<Region> {
      * Custom {@code ListCell} that displays the graphics of a {@code Person} using a {@code PersonCard}.
      */
     class PersonListViewCell extends ListCell<Person> {
+        private final InvalidationListener cardBoundsListener = observable -> requestHeightCheck();
+        private boolean isHeightCheckPending;
+
         /**
          * Lets the list viewport determine cell width instead of the longest member detail.
          */
@@ -69,6 +74,10 @@ public class PersonListPanel extends UiPart<Region> {
         @Override
         protected void updateItem(Person person, boolean empty) {
             super.updateItem(person, empty);
+            if (getGraphic() instanceof Region oldCard) {
+                oldCard.layoutBoundsProperty().removeListener(cardBoundsListener);
+                oldCard.prefWidthProperty().unbind();
+            }
 
             if (empty || person == null) {
                 setGraphic(null);
@@ -77,8 +86,26 @@ public class PersonListPanel extends UiPart<Region> {
                 Region card = new PersonCard(person, getIndex() + 1).getRoot();
                 // The cell knows the viewport width; the card must not size itself from long content.
                 card.prefWidthProperty().bind(widthProperty());
+                card.layoutBoundsProperty().addListener(cardBoundsListener);
                 setGraphic(card);
             }
+        }
+
+        /**
+         * Defers remeasurement until wrapping badges receive their actual layout width.
+         */
+        private void requestHeightCheck() {
+            if (isHeightCheckPending) {
+                return;
+            }
+            isHeightCheckPending = true;
+            Platform.runLater(() -> {
+                isHeightCheckPending = false;
+                // A one-pixel tolerance avoids repeating layout for rounding differences.
+                if (getGraphic() != null && Math.abs(getHeight() - prefHeight(getWidth())) > 1.0) {
+                    requestLayout();
+                }
+            });
         }
     }
 

@@ -115,7 +115,7 @@ On Windows PowerShell, set `$env:HIVEMIND_UI_TESTS = "true"` before running the 
 
 `PersonListPanel` observes the filtered and sorted person view exposed by `Logic`. Its list cells create a `PersonCard` for each displayed person, passing the cell's one-based index. When `find`, `filter`, `sort`, or `list` changes the displayed results, the list updates the cards and their indices. The existing UI class diagram shows this relationship; the card enhancement adds no new classes or dependencies.
 
-`PersonCard` loads `PersonListCard.fxml` through `UiPart`. The FXML `fx:id` attributes match the controller's `@FXML` fields. The constructor reads the person's public getters to populate the name, contact details, membership status, member type, optional role, and instruments. Type and status appear as text badges. `PersonCard.toDisplayText` capitalises the first character and replaces keyword hyphens with spaces for display (for example, `active-alumnus` becomes `Active alumnus`); model values, command keywords and storage remain unchanged. Card-specific styles in `DarkTheme.css` distinguish the name heading, contact details, secondary information and badges without changing the rest of the theme. Instrument labels use `Instrument.toDisplayString()` and are sorted by name, ignoring case.
+`PersonCard` loads `PersonListCard.fxml` through `UiPart`. The FXML injects display controls through the controller's `@FXML` fields; layout-only nodes retain identifiers for styling and tests. The constructor reads the person's public getters to populate the name, contact details, membership status, member type, optional role, and instruments. Type and status appear as text badges. `PersonCard.toDisplayText` capitalises the first character and replaces keyword hyphens with spaces for display (for example, `active-alumnus` becomes `Active alumnus`); model values, command keywords and storage remain unchanged. Card-specific styles in `DarkTheme.css` distinguish the name heading, contact details, secondary information and badges without changing the rest of the theme. Instrument labels use `Instrument.toDisplayString()` and are sorted by name, ignoring case.
 
 When no role is recorded, the role label has both `visible` and `managed` set to `false`: it is hidden and does not reserve layout space. Name, contact, and role labels allow text wrapping, while flow panes allow the membership details and instrument labels to move onto additional rows as space narrows. The email label and any recorded role also have full-text tooltips, with wrapping and a maximum width of 400 pixels, so clipped values remain accessible in narrow cards. These changes affect presentation only; the model and stored records are unchanged.
 
@@ -126,6 +126,10 @@ HIVEMIND_UI_TESTS=true ./gradlew test --tests seedu.address.ui.PersonCardTest --
 ```
 
 On Windows PowerShell, set `$env:HIVEMIND_UI_TESTS = "true"` and run `./gradlew.bat test --tests seedu.address.ui.PersonCardTest --rerun-tasks`. These tests do not replace visual checks for wrapping and scrolling; use the member-card scenarios in the manual-testing section below.
+
+The card's content `VBox` is a direct child of its outer `HBox`, so normal JavaFX sizing accounts for wrapping, CSS and selection borders without a cached height override. A recycled list cell can still be measured before its badges receive their actual width. `PersonListViewCell` therefore coalesces one deferred height check per cell after layout and requests another layout pass if the current row differs from its preferred height by more than one pixel. Replacing a card detaches its bounds listener and width binding.
+
+`PersonCardMacSizingTest` checks CSS changes at a fixed width, while `PersonListPanelSizingTest` checks content containment and adjacent rows through list transitions. `PersonListPanelPulseSizingTest` opens a real window with 200 members and allows layout pulses between scrolling, selection, resizing and adding a member. Run these checks with `HIVEMIND_UI_TESTS=true ./gradlew test --tests 'seedu.address.ui.*SizingTest'`. `PersonListPanelMacSpacingTest` remains a separate native macOS check; simulated platform names on Linux do not replace macOS testing.
 
 #### Empty member lists
 
@@ -796,6 +800,8 @@ Use a disposable directory for these checks so the test records do not affect yo
    Expected: Each tooltip shows the complete field text, including the full email domain and the end of the role. Resize the window wider and narrower and repeat; the tooltips still show the full values. A member without a role still has no role row.
 1. Run `add n/Card Width p/91234567 e/music.coordinator.long.contact.address@example.com s/member r/Student Coordinator for the University Chamber Orchestra i/Historical Keyboard and String Instrument Ensemble Performance Specialisation:12 g/University Chamber Orchestra Alumni and Student Combined Performance Group`. Resize the window to its minimum 450 × 400, then widen and narrow it again.<br>
    Expected: The full instrument name and `12 yrs` remain readable on wrapped lines, as does the group name. Neither badge pushes contact details or other card content beyond the visible right edge. Scroll vertically if the card is taller than the available area.
+1. On macOS, scroll through the list in both directions without selecting a card. Add another member, repeatedly select different cards, then widen and narrow the window and scroll again.<br>
+   Expected: Every row fits its card, names display fully, and instrument and group labels neither overlap one another nor extend into the next row. Selecting a card does not hide a problem elsewhere in the list.
 
 ### Checking persistent member counts
 
