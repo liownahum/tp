@@ -78,6 +78,34 @@ public class PersonCardTest {
     }
 
     @Test
+    public void constructor_longUnbrokenContactDetails_tooltipsExposeCompleteValues() throws Exception {
+        runOnFxThread(() -> {
+            String email = "thisisaverylongemailaddressusedtotestoverflowinaction@example.com";
+            String role = "percussion-section-leader-with-a-very-long-title";
+            Person person = new PersonBuilder().withEmail(email).withRole(role).build();
+            PersonCard card = new PersonCard(person, 1);
+            Region root = card.getRoot();
+            new Scene(root, 350, 600);
+
+            for (int width : new int[] {350, 800, 350}) {
+                root.resize(width, 600);
+                root.applyCss();
+                root.layout();
+                assertFullTextTooltip(label(card, "email"), email);
+                assertFullTextTooltip(label(card, "role"), "Role: " + role);
+            }
+        });
+    }
+
+    private static void assertFullTextTooltip(Label label, String expectedText) {
+        assertNotNull(label.getTooltip(), "Full details must remain accessible when the label is clipped");
+        assertEquals(expectedText, label.getTooltip().getText());
+        assertTrue(label.getTooltip().isWrapText(), "Long tooltip text must wrap within the screen");
+        assertTrue(label.getTooltip().getMaxWidth() > 0);
+        assertTrue(label.getTooltip().getMaxWidth() <= 600);
+    }
+
+    @Test
     public void constructor_optionalFieldsAbsent_hidesRoleAndHasNoInstruments() throws Exception {
         runOnFxThread(() -> {
             PersonCard card = new PersonCard(new PersonBuilder().build(), 1);
