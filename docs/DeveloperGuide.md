@@ -235,7 +235,7 @@ Each `Person` has a stable UUID record ID, independent of editable contact detai
 
 `JsonAdaptedPerson` saves the ID with the other fields and restores it on load. Older files without IDs receive fresh IDs as they load, which are written on the next successful data change. Malformed or repeated IDs are invalid data. Undo snapshots retain the same IDs because they copy the immutable person records.
 
-**Design choice:** Record IDs allow legitimate shared names and phone numbers without treating editable contact details as permanent identity. They add one internal JSON field but require no new user command or confirmation step. CSV keeps its existing eight columns and receives new record IDs on import. Since CSV has no IDs, `ImportCommand` rejects records with identical recorded details against the existing directory or earlier CSV rows, while allowing shared names with differing details.
+**Design choice:** Record IDs allow legitimate shared names and phone numbers without treating editable contact details as permanent identity. They add one internal JSON field but require no new user command or confirmation step. CSV keeps its existing eight columns and receives new record IDs on import. Since CSV has no IDs, `ImportCommand` rejects details matching the directory as it was before the import, while repeated rows within one CSV receive fresh IDs and a possible-duplicate warning. This allows a full export to restore identical records after `clear` without allowing a repeated import to duplicate the directory.
 
 ### Participation groups
 
@@ -325,13 +325,13 @@ The following sequence diagram traces execution of a parsed `export f/name f/pho
 
 `ImportCommand` asks `CsvImporter.importPeopleWithLineNumbers` to read the entire CSV before changing the model. `CsvImporter` validates the required header and eight-column layout, then constructs `Person` objects using the existing model value objects such as `Name`, `Phone`, `Email`, `Status`, and `MemberType`. This reuses the application's validation rules instead of duplicating them in the CSV layer. It returns the complete imported list with each record's starting physical line number only when every row is valid, including records spanning multiple lines.
 
-After parsing succeeds, `ImportCommand` copies the current address book and checks every imported person's recorded details against the copy before adding it. This detects identical records against both existing members and earlier CSV rows without mutating the model, while allowing different records to share names or phone numbers. Duplicate feedback identifies the person's name and starting physical line number. Only when all additions succeed does it replace the model's address book with the copy and show the full directory. Consequently, invalid CSV data and identical records fail the import atomically: the current directory and active filter remain unchanged.
+After parsing succeeds, `ImportCommand` copies the current address book and checks every imported person's recorded details against the original directory before adding it to the copy. A matching existing record fails the import, while a row matching an earlier CSV row is added with a fresh record ID and possible-duplicate warning. Duplicate failure feedback identifies the person's name and starting physical line number. Only when all additions succeed does the command replace the model's address book with the copy and show the full directory. Consequently, invalid CSV data and records matching the original directory fail the import atomically: the current directory and active filter remain unchanged.
 
 The following sequence diagram focuses on a successful `ImportCommand.execute(...)` call. Command parsing, field-level CSV parsing, error handling, and `LogicManager`'s generic save-and-rollback handling are omitted; they do not affect the command's validate-then-replace behavior.
 
 ![Import command sequence diagram](images/ImportSequenceDiagram.png)
 
-`ImportCommandTest` and `ImportCommandIntegrationTest` cover successful imports, duplicate handling, invalid data, malformed row layouts, optional fields, and atomic failures. `AddressBookParserTest` verifies that the command is recognised.
+`ImportCommandTest` and `ImportCommandIntegrationTest` cover successful imports, existing-record rejection, repeated-row warnings, default export/import round trips, invalid data, malformed row layouts, optional fields, and atomic failures. `AddressBookParserTest` verifies that the command is recognised.
 
 ### Undo/redo feature
 

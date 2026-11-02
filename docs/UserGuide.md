@@ -178,7 +178,7 @@ name,phone,email,status,memberType,role,instruments,groups
 "Benjamin Lee","92345678","benjamin.lee@example.com","active-alumnus","teacher","","Cello:12",""
 ```
 
-If any row has invalid data, does not contain eight columns, or has the same recorded details as an existing member or another CSV row, the entire import fails and the directory remains unchanged. Sharing only a name or phone number is allowed. Unlike `add`, import rejects identical records so a repeated CSV import cannot silently duplicate the directory. Instrument and group names are compared ignoring case when identifying identical records.
+If any row has invalid data, does not contain eight columns, or has the same recorded details as an existing member, the entire import fails and the directory remains unchanged. This prevents importing the same file twice from silently duplicating the directory. Identical rows within one CSV are imported as separate records with fresh IDs and produce a possible-duplicate warning, so a default export can restore such records after `clear`. Instrument and group names are compared ignoring case when identifying identical records.
 
 Example: `import members.csv`
 

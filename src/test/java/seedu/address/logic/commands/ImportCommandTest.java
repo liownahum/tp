@@ -88,11 +88,13 @@ public class ImportCommandTest {
     }
 
     @Test
-    public void execute_duplicatePerson_failure() throws IOException {
+    public void execute_repeatedPersonMatchingExisting_failureIsAtomic() throws IOException {
         Person existingPerson = new PersonBuilder().withName("Existing Person").withPhone("81111111")
                 .withEmail("existing@example.com").build();
         model.addPerson(existingPerson);
-        writeImportFile(HEADER, "Existing Person,81111111,existing@example.com,member,student,,,");
+        writeImportFile(HEADER,
+                "Existing Person,81111111,existing@example.com,member,student,,,",
+                "Existing Person,81111111,existing@example.com,member,student,,,");
         String expectedMessage = String.format(ImportCommand.MESSAGE_DUPLICATE_PERSON, "Existing Person", 2);
 
         assertCommandFailure(new ImportCommand(FILE_NAME, importDirectory), model, expectedMessage);
