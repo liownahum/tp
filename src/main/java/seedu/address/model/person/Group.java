@@ -8,7 +8,8 @@ import java.util.Objects;
 
 /**
  * A participation group that a person belongs to.
- * Group names preserve their spelling, but comparison ignores case and extra whitespace.
+ * Group names preserve their visible spelling; invisible format characters are removed.
+ * Comparison ignores case and extra whitespace.
  */
 public class Group {
 
@@ -26,7 +27,7 @@ public class Group {
     }
 
     /**
-     * Returns whether a group name contains non-whitespace characters.
+     * Returns whether a group name contains text after removing invisible characters and whitespace.
      */
     public static boolean isValidName(String name) {
         requireNonNull(name);
@@ -45,8 +46,9 @@ public class Group {
         return toKey(name).equals(toKey(normalizeName(otherName)));
     }
 
+    /** Removes invisible format characters before normalizing Unicode whitespace. */
     private static String normalizeName(String name) {
-        return name.replaceAll("(?U)\\s+", " ").trim();
+        return name.replaceAll("\\p{Cf}", "").replaceAll("(?U)\\s+", " ").trim();
     }
 
     private static String toKey(String name) {

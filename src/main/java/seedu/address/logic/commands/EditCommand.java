@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import seedu.address.commons.core.LogsCenter;
 import seedu.address.commons.core.index.Index;
@@ -92,6 +93,7 @@ public class EditCommand extends Command {
 
         Person personToEdit = lastShownList.get(index.getZeroBased());
         Person editedPerson = createEditedPerson(personToEdit, editPersonDescriptor);
+        String warnings = getPossibleDuplicateWarnings(model, editedPerson);
 
         model.setPerson(personToEdit, editedPerson);
         model.updateFilteredPersonList(PREDICATE_SHOW_ALL_PERSONS);
@@ -100,7 +102,25 @@ public class EditCommand extends Command {
             logger.info(() -> String.format("Participation group edit requested: %d groups before, %d groups after",
                     personToEdit.getGroups().size(), editedPerson.getGroups().size()));
         }
-        return new CommandResult(String.format(MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson)));
+        String success = String.format(MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson));
+        return new CommandResult(warnings.isEmpty() ? success : warnings + "\n" + success);
+    }
+
+    /**
+     * Returns a warning, as {@code add} gives, for each other member whose name (ignoring case) or phone matches
+     * {@code editedPerson}. Returns an empty string if this edit changes neither the name nor the phone, so that
+     * editing other fields does not repeat warnings about details the members already shared.
+     */
+    private String getPossibleDuplicateWarnings(Model model, Person editedPerson) {
+        if (editPersonDescriptor.getName().isEmpty() && editPersonDescriptor.getPhone().isEmpty()) {
+            return "";
+        }
+        return model.getAddressBook().getPersonList().stream()
+                .filter(person -> !person.isSamePerson(editedPerson))
+                .filter(person -> person.getName().fullName.equalsIgnoreCase(editedPerson.getName().fullName)
+                        || person.getPhone().equals(editedPerson.getPhone()))
+                .map(person -> String.format(AddCommand.MESSAGE_POSSIBLE_DUPLICATE, Messages.format(person)))
+                .collect(Collectors.joining("\n"));
     }
 
     /**

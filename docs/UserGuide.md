@@ -72,7 +72,7 @@ Command feedback has a **Success** label in green when a command completes and a
 * Items followed by `…`​ can appear zero or more times.<br>
   For example, `[i/INSTRUMENT:YEARS]…​` may be omitted, or written as `i/Violin:5` or `i/Violin:5 i/Piano:2`.
 
-* Parameters can be in any order. For `export`, their order determines the CSV column order.<br>
+* Prefixed parameters can be in any order. For `export`, their order determines the CSV column order. Positional parameters must stay in the position shown in the command format; for example, `INDEX` must precede the prefixed fields in `edit`.<br>
   For example, if the command specifies `n/NAME p/PHONE_NUMBER`, `p/PHONE_NUMBER n/NAME` is also acceptable.
 
 * A parameter value cannot contain a space followed by another prefix of the same command, as HiveMind reads that as the start of a new parameter.<br>
@@ -123,15 +123,15 @@ Format: `add n/NAME p/PHONE_NUMBER e/EMAIL s/STATUS [ty/TYPE] [r/ROLE] [i/INSTRU
 * `e/EMAIL` must have a local part, `@`, and a domain. The local part uses letters (`A`–`Z`, `a`–`z`) and digits, with single `+`, `_`, `.`, or `-` characters allowed between alphanumeric sequences. Each domain label uses letters and digits, with single hyphens allowed between alphanumeric sequences; the final label must have at least two characters. For example, `sean@example.com` and `sean.tan+cca@example-school.sg` are accepted; `not-email`, `.sean@example.com`, `sean..tan@example.com` and `sean@example.c` are rejected.
 * If the name matches an existing member's name ignoring case, or the phone number matches, HiveMind shows a warning for each possible duplicate and still adds the new member. Even identical details can belong to separate records; check the warning to avoid accidental duplicates.
 * `ty/TYPE` is optional: use `student` or `teacher`. It defaults to `student` when omitted.
-* `r/ROLE` is optional free text, such as `Section Leader`. It cannot be blank. Extra spaces are removed, so `Vice   President`{: style="white-space: pre"} (three spaces) is saved as `Vice President` (one space).
+* `r/ROLE` is optional free text, such as `Section Leader`. Invisible formatting characters are removed, and the result cannot be blank. Extra spaces are removed, so `Vice   President`{: style="white-space: pre"} (three spaces) is saved as `Vice President` (one space).
 * Type and status appear beneath the member's name on the card. If a role is supplied, it appears beneath the contact details; otherwise, the role line is hidden.
 * `i/INSTRUMENT:YEARS` records an instrument the person plays and how many whole years they have played it, from `0` to `99`. For example, `i/Violin:5` or `i/Bass Guitar:1`.
-* Instrument names cannot be blank or contain `:`. Each instrument can be listed only once per person; names are compared ignoring case, surrounding whitespace, and repeated whitespace, including Unicode spaces, so `Violin` and `violin` count as the same instrument.
-* `g/GROUP` records a participation group, such as `g/Chamber Orchestra`. It may be repeated for multiple groups. Blank group names are rejected; names are compared ignoring case, surrounding whitespace, and repeated whitespace, including Unicode spaces such as non-breaking spaces and en spaces, so repeated names are stored only once.
+* Instrument names cannot be blank or contain `:`. Each instrument can be listed only once per person; names are compared ignoring case, surrounding whitespace, and repeated whitespace, including Unicode spaces, so `Violin` and `violin` count as the same instrument. Invisible formatting characters, such as zero-width spaces copied from a web page, are removed from instrument names.
+* `g/GROUP` records a participation group, such as `g/Chamber Orchestra`. It may be repeated for multiple groups. Invisible formatting characters are removed, and names that become blank are rejected. Names are compared ignoring case, surrounding whitespace, and repeated whitespace, including Unicode spaces such as non-breaking spaces and en spaces, so repeated names are stored only once.
 * Recorded groups appear in the command's success message and as separate badges on the member card. A single group called `Dance, Music` has one badge; `g/Dance g/Music` produces two badges.
 * Start **each** group with the lowercase prefix `g/`, for example `g/Training g/Orchestra`. In `add`, an unrecognized prefix after a group can become part of that group's name: `g/Training gr/Orchestra` records one group named `Training gr/Orchestra`. Check the success message and correct a mistake with `edit INDEX g/Training g/Orchestra`.
 
-The name, phone and email rules also apply when editing those fields or importing a CSV file. Spaces at the start and end of a command field are removed. Within names, repeated ordinary spaces are preserved: `Alex Tan` and `Alex  Tan` are different name spellings. The possible-duplicate name warning ignores letter case, but does not collapse those spaces.
+The name, phone and email rules also apply when editing those fields or importing a CSV file. Spaces at the start and end of a command field are removed. Within names, repeated ordinary spaces are preserved: `Alex Tan` (one space) and `Alex  Tan`{: style="white-space: pre"} (two spaces) are different name spellings. The possible-duplicate name warning ignores letter case, but does not collapse those spaces.
 
 <div markdown="span" class="alert alert-primary">:bulb: **Tip:**
 A person can have any number of instruments, including zero.
@@ -148,8 +148,9 @@ Imports people from a CSV file in the `imports` folder. The imported people are 
 
 Format: `import FILE_NAME`
 
-Place the CSV file in the `imports` folder inside HiveMind's home folder, then provide its file name, including the
-`.csv` extension. For example, use `import members.csv` for a file named `members.csv` in that folder.
+Place the CSV file in the `imports` folder inside HiveMind's home folder, then provide its file name rather than a path. The file name must include the `.csv` extension and be a valid Windows file name. It cannot contain the reserved characters `\`, `/`, `:`, `*`, `?`, `"`, `<`, `>` or `|`, contain control characters, end with a space or period, or use a reserved name such as `CON.csv` or `COM1.csv`. For example, use `import members.csv` for a file named `members.csv` in that folder.
+
+Save the file using UTF-8 encoding. For example, when using Microsoft Excel, select the **CSV UTF-8** format rather than the plain CSV format.
 
 The CSV file must have this exact header and column order:
 
@@ -160,12 +161,12 @@ name,phone,email,status,memberType,role,instruments,groups
 The default `export` command produces this format. Partial exports, or exports with all eight columns in a different order,
 cannot be imported. Use `export` without field selections when preparing a file for import.
 
-Each subsequent row must have exactly these eight columns:
+Each subsequent non-empty member row must have exactly these eight columns:
 
 * `name`, `phone`, and `email` follow the same validation rules as `add`.
 * `status` must be `member`, `active-alumnus`, or `inactive-alumnus`.
 * `memberType` must be `student` or `teacher`.
-* `role` and `groups` are optional. Represent an empty optional value with `""`.
+* `role`, `instruments`, and `groups` may be empty. An empty value can be represented using `""`.
 * List multiple instruments as `NAME:YEARS` values separated by semicolons, for example `Violin:8;Piano:5`.
 * List multiple groups separated by semicolons, for example `Orchestra;Leadership Team`.
 * Within an instrument or group name, write `\;` for a literal semicolon and `\\` for a literal backslash. `export` applies these escapes automatically.
@@ -178,7 +179,7 @@ name,phone,email,status,memberType,role,instruments,groups
 "Benjamin Lee","92345678","benjamin.lee@example.com","active-alumnus","teacher","","Cello:12",""
 ```
 
-If any row has invalid data, does not contain eight columns, or has the same recorded details as an existing member or another CSV row, the entire import fails and the directory remains unchanged. Sharing only a name or phone number is allowed. Unlike `add`, import rejects identical records so a repeated CSV import cannot silently duplicate the directory. Instrument and group names are compared ignoring case when identifying identical records.
+Blank lines and rows containing only empty fields are ignored, regardless of their number of columns. If any non-empty member row has invalid data, does not contain eight columns, or has the same recorded details as an existing member, the entire import fails and the directory remains unchanged. This prevents importing the same file twice from silently duplicating the directory. Identical rows within one CSV are imported as separate records with fresh IDs and produce a possible-duplicate warning, so a default export can restore such records after `clear`. Instrument and group names are compared ignoring case when identifying identical records.
 
 Example: `import members.csv`
 
@@ -197,7 +198,7 @@ Each member card displays:
 * Recorded instruments and their years of experience, sorted alphabetically by instrument name, ignoring case. For example, `Piano (5 yrs)` and `Violin (1 yr)`. No instrument labels appear when none are recorded.
 * A `Groups:` heading with one badge per participation group, ordered alphabetically ignoring case. No groups section is shown when none are recorded.
 
-Long names, contact details, roles, instruments and groups wrap as the window narrows. Scroll down to see details or members below the visible area.
+Long names, contact details, roles, instruments and groups wrap as the window narrows. If an email or role is cut off, hover over that field to see its complete text in a tooltip. Scroll down to see details or members below the visible area.
 
 The same card details are shown in `find` and `filter` results. Displayed indices start at `1` and refer to the current list, so a member's index may change after a search, filter or sort. Use the current displayed index for commands such as `edit` and `delete`.
 
@@ -216,6 +217,7 @@ Format: `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [s/STATUS] [ty/TYPE] [r/
 * Existing values will be updated to the input values.
 * `s/STATUS` and `ty/TYPE` accept the same values as in `add`: `member`, `active-alumnus`, or `inactive-alumnus` for status, and `student` or `teacher` for type, ignoring case.
 * `r/ROLE` replaces the person's role. To remove the role, enter `r/` without a role after it.
+* If you edit the name or phone number and it then matches another member's name ignoring case, or their phone number, HiveMind shows a possible-duplicate warning for each such member, as `add` does, and still makes the edit.
 * Fields that are not specified are preserved. For example, editing a person's status keeps their contact details, type, role, instruments, and groups.
 * Instruments are preserved when they are not edited.
 * When editing instruments, all of the person's existing instruments are replaced; adding instruments is not cumulative.
@@ -279,35 +281,26 @@ Format: `filter [s/STATUS]... [i/NAME[:MIN_YEARS]]... [ty/TYPE]... [r/ROLE]... [
 
 Shows people matching the specified criteria and reports the number of matches.
 
-* At least one criterion is required. Each field is optional; an omitted field imposes no restriction.
-* Introduce each member type with `ty/`: use `student` or `teacher`, ignoring case and surrounding whitespace. Repeated types use OR.
-* Introduce each role with `r/`, for example `r/Section Leader`. Matches the complete role, ignoring case and extra whitespace; `r/Leader` does not match `Section Leader`. Repeated roles use OR.
-* Blank or invalid types and blank roles are rejected. People without a role do not match an explicit role criterion.
-* Introduce each participation group with `g/`, for example `g/Chamber Orchestra`. Matches the complete group name, ignoring case, surrounding whitespace, and repeated whitespace, including Unicode spaces such as non-breaking spaces and en spaces; `g/Orchestra` does not match `Chamber Orchestra`.
-* Groups use OR: `filter g/Chamber Orchestra g/Training` matches people belonging to either group or both. Repeated names count once. Blank group names are rejected, and people without groups do not match an explicit group criterion.
-* Different fields use AND: `filter ty/teacher r/Conductor s/member i/Violin:3 g/Chamber Orchestra` matches member teachers who are conductors, have at least three years on violin, and belong to Chamber Orchestra.
-* Introduce each status with `s/`: use `member`, `active-alumnus`, or `inactive-alumnus`, ignoring case and surrounding whitespace.
-* Statuses are combined with OR: `filter s/member s/active-alumnus` matches current members or active alumni.
-* Introduce each instrument name with `i/`. `i/Violin` matches anyone who plays violin, regardless of experience.
-* Optionally specify minimum years: `i/Violin:3` matches people with **at least 3 years** on violin, including exactly 3. The minimum must be a whole number from 0 to 99; blank, negative, decimal, and out-of-range values are rejected.
-* Invalid minimum years, such as `filter i/Violin:abc`, report: `Minimum years should be a whole number from 0 to 99`.
-* The years must belong to the matching instrument: experience on piano cannot satisfy a violin threshold.
-* Instruments are combined with OR: `filter i/Violin i/Viola` matches people who play either instrument or both.
-* Each repeated instrument criterion is an alternative, even for the same name: `filter i/Violin:3 i/Violin:5` matches violin players with at least 3 years. A name-only criterion such as `i/Violin` accepts any years for that instrument.
-* Status and instrument groups are combined with AND: `filter s/member s/active-alumnus i/Violin:3 i/Viola:5` matches people who are members or active alumni and have at least 3 years on violin or at least 5 years on viola.
-* Matches complete instrument names, ignoring case, surrounding whitespace, and repeated whitespace, including Unicode spaces such as non-breaking spaces and en spaces: `guitar` matches `Guitar`, but not `Bass Guitar`.
-* Spaces after `i/` and around `:` are allowed: `filter i/ Violin : 3` is equivalent to `filter i/Violin:3`.
-* Supported prefixes are `s/`, `i/`, `ty/`, `r/`, and `g/`. Unsupported member-field prefixes `n/`, `p/`, and `e/` report an error naming the prefix and listing the accepted prefixes.
-* Before the first supported prefix, removed prefixes (`t/`, `a/`) and wrong-case member-field prefixes (such as `S/`) also report a prefix error. Inside values, these remain ordinary text to preserve names such as `r/Head of a/v` and `r/Student t/a`.
-* Other unknown prefix-like text also remains part of the preceding value. Thus, `filter r/Lead x/1` searches for the complete role `Lead x/1`, and `filter s/member t/friend` reports an invalid status. Remove accidental text or replace it with a supported prefix.
-* Searches the full directory, including after a previous `find` or `filter`.
-* If no person matches, the displayed list is empty and the result reports zero matches.
-* Stored records are unchanged. Use `list` to display everyone again.
+Provide at least one criterion. **Repeated values within a field use OR; different fields use AND.** A person must match at least one value in each specified field. Omitted fields impose no restriction.
+
+| Prefix | Accepted values | How matching works |
+| --- | --- | --- |
+| `s/STATUS` | `member`, `active-alumnus`, `inactive-alumnus` | Matches the status, ignoring case and surrounding whitespace. |
+| `i/NAME[:MIN_YEARS]` | A complete instrument name, optionally followed by `:` and a whole number from 0 to 99 | Matches the complete name, ignoring case and extra whitespace. Without a minimum, any experience qualifies; otherwise, requires **at least** that many years on that instrument. |
+| `ty/TYPE` | `student`, `teacher` | Matches the member type, ignoring case and surrounding whitespace. |
+| `r/ROLE` | A non-blank role, such as `Section Leader` | Matches the complete role, ignoring case and surrounding whitespace. `Leader` does not match `Section Leader`. People without a role do not match. |
+| `g/GROUP` | A non-blank group name, such as `Chamber Orchestra` | Matches the complete group name, ignoring case and extra whitespace. `Orchestra` does not match `Chamber Orchestra`. People without groups do not match. |
+
+Use the lowercase prefixes shown above. Invalid values produce an error explaining the accepted input.
+
+Each filter searches the full directory, including after a previous `find` or `filter`. If nobody matches, the list is empty and the result reports zero matches. Stored records are unchanged; use `list` to display everyone again.
 
 Examples:
 
-* `filter g/Chamber Orchestra`
-* `filter s/member i/Violin:3 g/Chamber Orchestra`
+* `filter g/Chamber Orchestra` — shows everyone in Chamber Orchestra.
+* `filter i/Violin i/Viola` — shows people who play violin or viola, including those who play both.
+* `filter s/member s/active-alumnus i/Violin:3 g/Chamber Orchestra` — shows current members or active alumni who also have at least 3 years on violin and belong to Chamber Orchestra.
+* `filter ty/teacher r/Conductor` — shows teachers whose role is Conductor.
 
 ### Exporting current results: `export`
 
@@ -368,6 +361,7 @@ Reverts the most recent changes made by `add`, `edit`, `delete`, `clear` or `imp
 Format: `undo [COUNT]`
 
 * Reverts the `COUNT` most recent changes, most recent first. Without `COUNT`, only the most recent change is reverted.
+* The result lists the command of each reverted change as you typed it, most recent first. For example, after `delete 1` and then `delete 3`, `undo 2` shows `delete 3`, then `delete 1`.
 * `COUNT` must be a positive integer, e.g. 1, 2, 3, …​
 * You can undo changes back to when HiveMind was started. If fewer than `COUNT` changes can be undone, nothing is undone and HiveMind tells you how many can be, or that there is no change to undo.
 * Commands that do not change data (e.g. `list`, `find`, `filter`, `sort`, `export`) are not undone.
@@ -387,6 +381,7 @@ Format: `redo [COUNT]`
 * Restores the `COUNT` most recently undone changes. Without `COUNT`, only the most recently undone change is restored.
 * `COUNT` must be a positive integer, e.g. 1, 2, 3, …​
 * Changes are restored in the reverse order of undoing: the most recently undone change comes back first.
+* The result lists the command of each restored change as you typed it, in the order restored.
 * If fewer than `COUNT` undone changes can be restored, nothing is redone and HiveMind tells you how many can be, or that there is no undone change to redo.
 * Once you make a new change (e.g. `add`, `edit`, `delete`, `clear` or `import`) after an `undo`, the undone changes can no longer be redone. This also applies to an `edit` that leaves the member's details unchanged.
 * After a redo, the full member list is shown.
@@ -414,10 +409,16 @@ users are welcome to update data directly by editing that data file.
 
 Keep an existing member's `id` unchanged when editing the data file. To create another member, use `add` so the new record receives its own ID.
 
+When loading saved data, HiveMind combines duplicate instruments for each member instead of treating them as an invalid file. Names are compared using the same rules as `add`, including ignoring case and normalising whitespace. HiveMind keeps the entry with the highest years of experience, including that entry's capitalisation; if the years are equal, it keeps the first entry. For example, `Piano:3` and `piano:5` become `piano:5`. This merge is recorded only in the log, with no notice in the app or backup of the file. Loading does not change the file; the next successful command that changes member data saves the combined entries.
+
 When loading saved data, HiveMind ignores group entries made only of non-breaking spaces, including mixtures with ordinary spaces or tabs. Members and their other details are preserved. Empty group names and names made only of ordinary spaces or tabs make the data file invalid. Loading does not change the file; the next successful command that changes directory data saves it without the ignored group entries.
 
 <div markdown="span" class="alert alert-warning">:exclamation: **Caution:**
-If your changes make the data file invalid, HiveMind starts with an empty directory at the next run, creates a numbered backup alongside it (e.g., `addressbook.json.bak-01`, followed by `addressbook.json.bak-02` if another backup is needed), and prevents directory changes from being saved. Repair or restore the original data file before restarting the app.<br>
+If HiveMind finds `addressbook.json` but cannot load it, HiveMind starts with an empty directory and prevents directory
+changes from being saved. If `addressbook.json` remains a regular file, HiveMind creates a numbered backup
+alongside it (e.g., `addressbook.json.bak-01`, followed by `addressbook.json.bak-02` if another backup is needed). If
+the path is not a regular file, such as when it is a folder, HiveMind reports that a backup could not be created and
+does not create an empty backup folder. Repair or restore the original data file before restarting the app.<br>
 Furthermore, certain edits can cause HiveMind to behave in unexpected ways (e.g., if a value entered is outside of the acceptable range). Therefore, edit the data file only if you are confident that you can update it correctly.
 </div>
 

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static seedu.address.testutil.TypicalPersons.ALICE;
 import static seedu.address.testutil.TypicalPersons.HOON;
 import static seedu.address.testutil.TypicalPersons.IDA;
@@ -148,9 +149,9 @@ public class ExportCommandTest {
     @Test
     public void execute_preservesRecordsDisplayedResultsAndUndoRedoHistory() throws Exception {
         model.addPerson(HOON);
-        model.commitAddressBook();
+        model.commitAddressBook("add Hoon");
         model.addPerson(IDA);
-        model.commitAddressBook();
+        model.commitAddressBook("add Ida");
         model.undoAddressBook();
         AddressBookParser parser = new AddressBookParser();
         parser.parseCommand("find Meier").execute(model);
@@ -203,8 +204,31 @@ public class ExportCommandTest {
     }
 
     @Test
+    public void execute_exportDirectoryIsSymbolicLink_doesNotWriteOutsideDirectory() throws Exception {
+        Path outsideDirectory = Files.createDirectory(testFolder.resolve("outside"));
+        Path exportDirectory = testFolder.resolve("exports");
+        createSymbolicLinkOrSkip(exportDirectory, outsideDirectory);
+
+        CommandException exception = assertThrows(CommandException.class, () ->
+            new ExportCommand(exportDirectory).execute(model));
+
+        String expectedMessage = String.format(ExportCommand.MESSAGE_EXPORT_FAILURE, exportDirectory);
+        assertEquals(expectedMessage, exception.getMessage());
+        assertTrue(exception.getCause() instanceof IOException);
+        assertFalse(Files.exists(outsideDirectory.resolve("current-results-01.csv")));
+    }
+
+    @Test
     public void requiresSave_returnsFalse() {
         assertFalse(new ExportCommand(testFolder).requiresSave());
         assertFalse(new ExportCommand(testFolder, List.of(ExportField.NAME)).requiresSave());
+    }
+
+    private void createSymbolicLinkOrSkip(Path link, Path target) {
+        try {
+            Files.createSymbolicLink(link, target);
+        } catch (UnsupportedOperationException | IOException exception) {
+            assumeTrue(false, "Symbolic links are unavailable: " + exception.getMessage());
+        }
     }
 }

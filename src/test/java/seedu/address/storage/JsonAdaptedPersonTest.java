@@ -120,7 +120,8 @@ public class JsonAdaptedPersonTest {
 
     @Test
     public void toModelType_unicodeBlankInstrument_preservesPersonAndOtherInstruments() throws Exception {
-        for (String blank : List.of("\u00a0", "\u2007", "\u202f", "\u0085", " \u2002\u00a0\t")) {
+        for (String blank : List.of("\u00a0", "\u2007", "\u202f", "\u0085", " \u2002\u00a0\t", "\u200b",
+                "\ufeff \u200d")) {
             List<JsonAdaptedInstrument> instruments = List.of(
                     new JsonAdaptedInstrument(blank, 3), new JsonAdaptedInstrument("Cello", 5));
             JsonAdaptedPerson person = adaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL, instruments);
@@ -252,6 +253,26 @@ public class JsonAdaptedPersonTest {
             assertEquals(expected, restored);
             assertTrue(expected.isSamePerson(restored));
         }
+    }
+
+    @Test
+    public void jsonRoundTrip_invisibleGroupsAndRole_preservesMemberIdentity() throws Exception {
+        Person expected = new PersonBuilder(BENSON).withGroups("Jazz").withoutRole().build();
+        String json = JsonUtil.toJsonString(new JsonAdaptedPerson(expected))
+                .replace("\"Jazz\"", "\"Jazz\", \"Ja\u200bzz\", \"\ufeff\"")
+                .replace("\"role\" : null", "\"role\" : \"\u200b\"");
+        Person restored = JsonUtil.fromJsonString(json, JsonAdaptedPerson.class).toModelType();
+        assertEquals(expected, restored);
+        assertEquals(expected.getId(), restored.getId());
+        assertEquals(1, restored.getGroups().size());
+        assertTrue(restored.getRole().isEmpty());
+    }
+
+    @Test
+    public void toModelType_invisibleRole_returnsPersonWithoutRole() throws Exception {
+        JsonAdaptedPerson person = new JsonAdaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL,
+                VALID_STATUS, VALID_MEMBER_TYPE, "\u200b\ufeff", VALID_INSTRUMENTS);
+        assertTrue(person.toModelType().getRole().isEmpty());
     }
 
     @Test

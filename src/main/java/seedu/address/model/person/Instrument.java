@@ -38,6 +38,7 @@ public class Instrument {
     /**
      * Constructs an {@code Instrument}.
      * Surrounding whitespace in the name is removed and inner whitespace is collapsed to single spaces.
+     * Invisible formatting characters, such as zero-width spaces, are removed.
      *
      * @param name A valid instrument name.
      * @param years A valid number of years played.
@@ -131,8 +132,13 @@ public class Instrument {
         return false;
     }
 
+    /**
+     * Returns {@code name} without invisible formatting characters (Unicode category Cf, such as zero-width
+     * spaces), with surrounding whitespace removed and inner whitespace collapsed to single spaces.
+     * Removing the invisible characters stops two names that look the same from counting as different instruments.
+     */
     static String normalizeName(String name) {
-        return name.replaceAll("(?U)\\s+", " ").trim();
+        return name.replaceAll("\\p{Cf}", "").replaceAll("(?U)\\s+", " ").trim();
     }
 
     private static String toKey(String normalizedName) {

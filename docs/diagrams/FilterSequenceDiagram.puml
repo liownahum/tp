@@ -2,7 +2,6 @@
 !include style.puml
 skinparam ArrowFontStyle plain
 skinparam sequenceMessageAlign left
-skinparam sequenceReferenceBackgroundColor #FFFFFF
 skinparam BoxPadding 10
 <style>
 participant {
@@ -22,21 +21,7 @@ participant "p:Predicate" as Predicate MODEL_COLOR
 participant "sortedPersons:\nSortedList" as SortedList MODEL_COLOR
 end box
 
-legend top
-Input: filter s/member i/Violin:3
-ty/teacher r/Conductor g/Chamber Orchestra
-criteria = statuses, instrumentCriteria, memberTypes, roles, groups
-endlegend
-
-[-> LogicManager : execute(commandText)
 activate LogicManager
-ref over LogicManager, FilterCommand
-AddressBookParser delegates to
-FilterCommandParser to validate criteria.
-Return the parsed command:
-f = new FilterCommand(criteria).
-end ref
-
 LogicManager -> FilterCommand : execute(m)
 activate FilterCommand
 create Predicate

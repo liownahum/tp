@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">HiveMind honeycomb H</title>
+  <path fill="#f4bd50" d="M64 4 116 34v60l-52 30L12 94V34z"/>
+  <path fill="#292d34" d="M64 16 106 40v48l-42 24L22 88V40z"/>
+  <path fill="#f4bd50" d="M40 36h13v21h22V36h13v56H75V70H53v22H40z"/>
+</svg>

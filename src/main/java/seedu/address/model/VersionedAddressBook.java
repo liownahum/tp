@@ -1,5 +1,7 @@
 package seedu.address.model;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,6 +11,8 @@ import java.util.List;
 public class VersionedAddressBook extends AddressBook {
 
     private final List<ReadOnlyAddressBook> addressBookStateList;
+    // The description at index i is the change that led from state i - 1 to state i
+    private final List<String> changeDescriptionList;
     private int currentStatePointer;
 
     /**
@@ -20,6 +24,8 @@ public class VersionedAddressBook extends AddressBook {
         super(initialState);
         addressBookStateList = new ArrayList<>();
         addressBookStateList.add(new AddressBook(initialState));
+        changeDescriptionList = new ArrayList<>();
+        changeDescriptionList.add("");
         currentStatePointer = 0;
     }
 
@@ -27,15 +33,21 @@ public class VersionedAddressBook extends AddressBook {
      * Discards any states after the current one, then records the current data as a new state.
      * No new state is recorded if the data is unchanged since the current state, so commands that
      * do not modify data do not create empty undo steps.
+     *
+     * @param description the change that led to the current data, reported when it is undone or redone
      */
-    public void commit() {
+    public void commit(String description) {
+        requireNonNull(description);
         addressBookStateList.subList(currentStatePointer + 1, addressBookStateList.size()).clear();
+        changeDescriptionList.subList(currentStatePointer + 1, changeDescriptionList.size()).clear();
         if (!hasUncommittedChanges()) {
             return;
         }
         addressBookStateList.add(new AddressBook(this));
+        changeDescriptionList.add(description);
         currentStatePointer++;
         assert currentStatePointer == addressBookStateList.size() - 1;
+        assert changeDescriptionList.size() == addressBookStateList.size();
     }
 
     /**
@@ -48,15 +60,18 @@ public class VersionedAddressBook extends AddressBook {
     /**
      * Restores the data to the previous state in the history.
      *
+     * @return the description of the reverted change, as given to {@link #commit(String)}.
      * @throws NoUndoableStateException if there is no change to revert.
      */
-    public void undo() {
+    public String undo() {
         if (!canUndo()) {
             throw new NoUndoableStateException();
         }
         assert !hasUncommittedChanges() : "Uncommitted changes would be lost by undo";
+        String description = changeDescriptionList.get(currentStatePointer);
         currentStatePointer--;
         resetData(addressBookStateList.get(currentStatePointer));
+        return description;
     }
 
     /**
@@ -103,15 +118,17 @@ public class VersionedAddressBook extends AddressBook {
     /**
      * Restores the most recently undone change.
      *
+     * @return the description of the restored change, as given to {@link #commit(String)}.
      * @throws NoRedoableStateException if there is no undone change to restore.
      */
-    public void redo() {
+    public String redo() {
         if (!canRedo()) {
             throw new NoRedoableStateException();
         }
         assert !hasUncommittedChanges() : "Uncommitted changes would be lost by redo";
         currentStatePointer++;
         resetData(addressBookStateList.get(currentStatePointer));
+        return changeDescriptionList.get(currentStatePointer);
     }
 
     /**

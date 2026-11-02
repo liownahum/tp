@@ -57,8 +57,35 @@ import seedu.address.model.person.Role;
 import seedu.address.model.person.Status;
 import seedu.address.testutil.PersonBuilder;
 
+/** Verifies add validation, including useful errors and legitimate slash-containing field values. */
 public class AddCommandParserTest {
     private AddCommandParser parser = new AddCommandParser();
+
+    @Test
+    public void parse_unknownPrefixInPreamble_namesPrefix() {
+        String fields = NAME_DESC_AMY + PHONE_DESC_AMY + EMAIL_DESC_AMY + STATUS_DESC_AMY;
+        for (String prefix : new String[]{"t/", "a/", "N/", "TY/", "G/"}) {
+            String expected = String.format(Messages.MESSAGE_UNKNOWN_PREFIX, prefix, "n/ p/ e/ s/ ty/ r/ i/ g/");
+            assertParseFailure(parser, " " + prefix + "wrong" + fields, expected);
+        }
+    }
+
+    @Test
+    public void parse_slashTextAfterSupportedPrefix_preservesFieldValues() {
+        Person expected = new PersonBuilder(AMY).withInstruments().withRole("N/A c/o a/v")
+                .withGroups("Training gr/Orchestra").build();
+        assertParseSuccess(parser, NAME_DESC_AMY + PHONE_DESC_AMY + EMAIL_DESC_AMY + STATUS_DESC_AMY
+                + " r/N/A c/o a/v g/Training gr/Orchestra", new AddCommand(expected));
+    }
+
+    @Test
+    public void parse_invisibleGroupAndRole_normalizesAndRejectsBlankValues() {
+        String fields = NAME_DESC_AMY + PHONE_DESC_AMY + EMAIL_DESC_AMY + STATUS_DESC_AMY;
+        Person expected = new PersonBuilder(AMY).withInstruments().withGroups("Jazz").withRole("Leader").build();
+        assertParseSuccess(parser, fields + " g/Jazz g/Ja\u200bzz r/Lea\u200bder", new AddCommand(expected));
+        assertParseFailure(parser, fields + " g/\u200b", Group.MESSAGE_CONSTRAINTS);
+        assertParseFailure(parser, fields + " r/\ufeff", Role.MESSAGE_CONSTRAINTS);
+    }
 
     @Test
     public void parse_allFieldsPresent_success() {

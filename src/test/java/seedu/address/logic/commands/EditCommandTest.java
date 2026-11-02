@@ -240,8 +240,9 @@ public class EditCommandTest {
         Person editedPerson = new PersonBuilder(firstPerson).withId(secondPerson.getId()).build();
         Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
         expectedModel.setPerson(secondPerson, editedPerson);
-        assertCommandSuccess(editCommand, model,
-                String.format(EditCommand.MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson)), expectedModel);
+        String expectedMessage = String.format(AddCommand.MESSAGE_POSSIBLE_DUPLICATE, Messages.format(firstPerson))
+                + "\n" + String.format(EditCommand.MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson));
+        assertCommandSuccess(editCommand, model, expectedMessage, expectedModel);
         assertEquals(secondPerson.getId(), model.getFilteredPersonList().get(1).getId());
     }
 
@@ -258,9 +259,56 @@ public class EditCommandTest {
         Person editedPerson = new PersonBuilder(personInList).withId(selected.getId()).build();
         Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
         expectedModel.setPerson(selected, editedPerson);
+        String expectedMessage = String.format(AddCommand.MESSAGE_POSSIBLE_DUPLICATE, Messages.format(personInList))
+                + "\n" + String.format(EditCommand.MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson));
+        assertCommandSuccess(editCommand, model, expectedMessage, expectedModel);
+        assertEquals(selected.getId(), model.getFilteredPersonList().getFirst().getId());
+    }
+
+    @Test
+    public void execute_phoneEditedToMatchAnotherMember_warnsAndEdits() {
+        Person firstPerson = model.getFilteredPersonList().get(INDEX_FIRST_PERSON.getZeroBased());
+        Person secondPerson = model.getFilteredPersonList().get(INDEX_SECOND_PERSON.getZeroBased());
+        EditPersonDescriptor descriptor = new EditPersonDescriptorBuilder()
+                .withPhone(firstPerson.getPhone().value).build();
+        EditCommand editCommand = new EditCommand(INDEX_SECOND_PERSON, descriptor);
+
+        Person editedPerson = new PersonBuilder(secondPerson).withPhone(firstPerson.getPhone().value).build();
+        Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
+        expectedModel.setPerson(secondPerson, editedPerson);
+        String expectedMessage = String.format(AddCommand.MESSAGE_POSSIBLE_DUPLICATE, Messages.format(firstPerson))
+                + "\n" + String.format(EditCommand.MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson));
+        assertCommandSuccess(editCommand, model, expectedMessage, expectedModel);
+    }
+
+    @Test
+    public void execute_nameEditedToOwnNameDifferentCase_noWarning() {
+        Person firstPerson = model.getFilteredPersonList().get(INDEX_FIRST_PERSON.getZeroBased());
+        String upperCaseName = firstPerson.getName().fullName.toUpperCase();
+        EditCommand editCommand = new EditCommand(INDEX_FIRST_PERSON,
+                new EditPersonDescriptorBuilder().withName(upperCaseName).build());
+
+        Person editedPerson = new PersonBuilder(firstPerson).withName(upperCaseName).build();
+        Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
+        expectedModel.setPerson(firstPerson, editedPerson);
         assertCommandSuccess(editCommand, model,
                 String.format(EditCommand.MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson)), expectedModel);
-        assertEquals(selected.getId(), model.getFilteredPersonList().getFirst().getId());
+    }
+
+    @Test
+    public void execute_otherFieldEditedWhenPhoneAlreadyShared_noWarning() {
+        Person firstPerson = model.getFilteredPersonList().get(INDEX_FIRST_PERSON.getZeroBased());
+        Person secondPerson = model.getFilteredPersonList().get(INDEX_SECOND_PERSON.getZeroBased());
+        Person sharingPhone = new PersonBuilder(secondPerson).withPhone(firstPerson.getPhone().value).build();
+        model.setPerson(secondPerson, sharingPhone);
+        EditCommand editCommand = new EditCommand(INDEX_SECOND_PERSON,
+                new EditPersonDescriptorBuilder().withRole("Librarian").build());
+
+        Person editedPerson = new PersonBuilder(sharingPhone).withRole("Librarian").build();
+        Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
+        expectedModel.setPerson(sharingPhone, editedPerson);
+        assertCommandSuccess(editCommand, model,
+                String.format(EditCommand.MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson)), expectedModel);
     }
 
     @Test

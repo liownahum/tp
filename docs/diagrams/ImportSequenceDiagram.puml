@@ -1,6 +1,7 @@
 @startuml
 !include style.puml
 skinparam ArrowFontStyle plain
+skinparam sequenceMessageAlign left
 
 box Logic LOGIC_COLOR_T1
 participant "i:ImportCommand" as ImportCommand LOGIC_COLOR
@@ -17,7 +18,7 @@ end box
 
 [-> ImportCommand : execute(...)
 activate ImportCommand
-ImportCommand -> CsvImporter : importPeople(importPath)
+ImportCommand -> CsvImporter : importPeopleWithLineNumbers(importPath)
 activate CsvImporter
 CsvImporter --> ImportCommand : importedPeople
 deactivate CsvImporter
@@ -28,7 +29,8 @@ Model --> ImportCommand : currentAddressBook
 deactivate Model
 note right of ImportCommand
 Build an updated copy containing every
-imported person. Detect duplicates here.
+importedPerson.person(). Detect duplicates
+using its starting physical lineNumber().
 end note
 ImportCommand -> Model : setAddressBook(updated copy)
 activate Model

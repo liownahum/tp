@@ -9,7 +9,10 @@ title: Developer Guide
 
 ## **Acknowledgements**
 
-* _{List the sources of reused or adapted ideas, code, documentation, and third-party libraries here, with links to the originals.}_
+* HiveMind adapts [AddressBook-Level3](https://github.com/se-edu/addressbook-level3), created by the [SE-EDU initiative](https://se-education.org). Its application architecture, command/parser/model/storage/UI foundations, initial build and test setup, and original guide content and diagrams have been extended for music CCA member management.
+* The inherited JavaFX implementation includes adaptations of [Marco Jakob's JavaFX tutorial](https://code.makery.ch/library/javafx-tutorial/). Original image credits are recorded in [`copyright.txt`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/copyright.txt).
+* Runtime libraries: [JavaFX](https://openjfx.io/) for the interface and [Jackson](https://github.com/FasterXML/jackson) for JSON persistence. Tests use [JUnit 5](https://junit.org/junit5/).
+* Build, analysis and documentation tools include [Gradle](https://gradle.org/), [Shadow](https://gradleup.com/shadow/), [Checkstyle](https://checkstyle.org/), [JaCoCo](https://www.jacoco.org/), and [PlantUML](https://plantuml.com/). The website uses [Jekyll](https://jekyllrb.com/) with the [Minima theme](https://github.com/jekyll/minima).
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -106,9 +109,9 @@ On Windows PowerShell, set `$env:HIVEMIND_UI_TESTS = "true"` before running the 
 
 `PersonCard` loads `PersonListCard.fxml` through `UiPart`. The FXML `fx:id` attributes match the controller's `@FXML` fields. The constructor reads the person's public getters to populate the name, contact details, membership status, member type, optional role, and instruments. Type and status appear as text badges. `PersonCard.toDisplayText` capitalises the first character and replaces keyword hyphens with spaces for display (for example, `active-alumnus` becomes `Active alumnus`); model values, command keywords and storage remain unchanged. Card-specific styles in `DarkTheme.css` distinguish the name heading, contact details, secondary information and badges without changing the rest of the theme. Instrument labels use `Instrument.toDisplayString()` and are sorted by name, ignoring case.
 
-When no role is recorded, the role label has both `visible` and `managed` set to `false`: it is hidden and does not reserve layout space. Name, contact, and role labels allow text wrapping, while flow panes allow the membership details and instrument labels to move onto additional rows as space narrows. These changes affect presentation only; the model and stored records are unchanged.
+When no role is recorded, the role label has both `visible` and `managed` set to `false`: it is hidden and does not reserve layout space. Name, contact, and role labels allow text wrapping, while flow panes allow the membership details and instrument labels to move onto additional rows as space narrows. The email label and any recorded role also have full-text tooltips, with wrapping and a maximum width of 400 pixels, so clipped values remain accessible in narrow cards. These changes affect presentation only; the model and stored records are unchanged.
 
-`PersonCardTest` loads the actual FXML and checks field values, all status/type combinations, role visibility and layout participation, empty instruments, and instrument ordering. It runs on the JavaFX application thread and requires a working graphical session. Enable it with the environment variable `HIVEMIND_UI_TESTS=true`; otherwise JUnit skips this test class so the existing headless CI remains usable. On Linux/macOS, run:
+`PersonCardTest` loads the actual FXML and checks field values, all status/type combinations, role visibility and layout participation, empty instruments, instrument ordering, and full-text tooltips for long unbroken email and role values after resizing. It runs on the JavaFX application thread and requires a working graphical session. Enable it with the environment variable `HIVEMIND_UI_TESTS=true`; otherwise JUnit skips this test class so the existing headless CI remains usable. On Linux/macOS, run:
 
 ```sh
 HIVEMIND_UI_TESTS=true ./gradlew test --tests seedu.address.ui.PersonCardTest --rerun-tasks
@@ -156,7 +159,7 @@ The parser class diagram below uses `add` as one example of how HiveMind parses 
 <img src="images/ParserClasses.png" width="850"/>
 
 How the parsing works:
-* `AddressBookParser` creates an `AddCommandParser` for `add`. The parser tokenizes prefixes into an `ArgumentMultimap` and checks that `n/`, `p/`, `e/`, and `s/` are present.
+* `AddressBookParser` creates an `AddCommandParser` for `add`. The parser checks for unsupported prefixes with `ArgumentTokenizer.verifyNoUnknownPrefixes`, tokenizes prefixes into an `ArgumentMultimap` and checks that `n/`, `p/`, `e/`, and `s/` are present. Unsupported or wrong-case prefixes in the preamble are named in the error; ambiguous slash-containing text within values remains text, following the same rules as `edit` and `filter`.
 * `ParserUtil` validates the status, member type, optional role, instruments, and participation groups. When `ty/` is omitted, `AddCommandParser` uses `student`; when `r/` is omitted, the person's role is empty. Repeated `g/` prefixes add groups to the person's group set.
 * `AddCommandParser` creates a `Person` from the parsed values, then an `AddCommand` containing that person. `AddressBookParser` returns it as a `Command` to `LogicManager`.
 * Other command parsers follow the same `Parser` interface, although their accepted prefixes and validation rules differ.
@@ -186,11 +189,15 @@ The `Storage` component,
 * is implemented by `StorageManager`, which delegates the actual JSON file access to `JsonAddressBookStorage` and `JsonUserPrefsStorage` (one class per data file).
 * depends on some classes in the `Model` component (because the `Storage` component's job is to save/retrieve objects that belong to the `Model`)
 
-`JsonAdaptedPerson` rejects null group entries and names for which `String.isBlank()` returns true. For each remaining entry, it skips the membership if `Group.isValidName()` returns false. This omits Unicode-whitespace-only names such as `"\u00A0"` while preserving the person and valid groups. Valid names are constructed as `Group` objects, which replace runs of Unicode whitespace with one ordinary space and trim the result.
+`JsonAdaptedPerson` rejects null group entries and names for which `String.isBlank()` returns true. For each remaining entry, it skips the membership if `Group.isValidName()` returns false. This omits names made only of Unicode whitespace or invisible formatting characters, such as `"\u00A0"` or `"\u200B"`, while preserving the person and valid groups. Valid names are constructed as `Group` objects, which remove Unicode format characters (`\p{Cf}`), replace runs of Unicode whitespace with one ordinary space and trim the result.
 
 `JsonAdaptedPerson` also skips instrument entries whose names are not blank according to `String.isBlank()` but normalize to empty. Remaining instrument names are compared ignoring case and normalized Unicode whitespace. If old entries collapse to the same instrument name, the loader keeps the highest years of experience. These migrations preserve the member's record ID and other fields; loading does not rewrite the file.
 
 This loading rule applies only to saved JSON data. Command parsing rejects every group name that normalizes to empty. Loading does not rewrite the data file, and successfully loaded records remain editable and saveable. The next successful command requiring a save writes the directory without the skipped memberships.
+
+Before recovery backs up an unreadable address book, `JsonAddressBookStorage` verifies that its path is a regular file.
+If the path is a directory or another non-regular path, `backupAddressBook()` throws an `IOException`; `MainApp`
+reports that the backup could not be created, and no empty backup directory is created.
 
 ### Common classes
 
@@ -212,8 +219,8 @@ working directory for compatibility with Gradle and IDE launches.
 
 `LogsCenter` obtains its log path from `ApplicationPaths` during its initial static configuration, before the first
 application log entry can create a file. `MainApp` uses the same abstraction for preferences, member data and the
-imports directory. `ImportCommand` and `ExportCommand` use it for their default directories. Recovery backups remain
-beside the configured member-data file, so they are under the same application home. Tests can continue to pass
+imports directory. `ImportCommand` and `ExportCommand` use it for their default directories. Recovery backups, when
+created, remain beside the configured member-data file, so they are under the same application home. Tests can pass
 explicit temporary import and export directories to the commands, avoiding writes to the repository during unit and
 integration testing.
 
@@ -231,13 +238,13 @@ Each `Person` has a stable UUID record ID, independent of editable contact detai
 
 `JsonAdaptedPerson` saves the ID with the other fields and restores it on load. Older files without IDs receive fresh IDs as they load, which are written on the next successful data change. Malformed or repeated IDs are invalid data. Undo snapshots retain the same IDs because they copy the immutable person records.
 
-**Design choice:** Record IDs allow legitimate shared names and phone numbers without treating editable contact details as permanent identity. They add one internal JSON field but require no new user command or confirmation step. CSV keeps its existing eight columns and receives new record IDs on import. Since CSV has no IDs, `ImportCommand` rejects records with identical recorded details against the existing directory or earlier CSV rows, while allowing shared names with differing details.
+**Design choice:** Record IDs allow legitimate shared names and phone numbers without treating editable contact details as permanent identity. They add one internal JSON field but require no new user command or confirmation step. CSV keeps its existing eight columns and receives new record IDs on import. Since CSV has no IDs, `ImportCommand` rejects details matching the directory as it was before the import, while repeated rows within one CSV receive fresh IDs and a possible-duplicate warning. This allows a full export to restore identical records after `clear` without allowing a repeated import to duplicate the directory.
 
 ### Participation groups
 
-`Group` stores a non-blank name and normalizes whitespace before comparing names ignoring case. `ParserUtil.parseGroups` builds a set, so repeating `g/Choir g/choir` records one group. `add` may omit all groups. `edit` preserves groups unless `g/` is supplied; named groups replace the entire set, and a single empty `g/` clears it. An empty value mixed with named groups is rejected.
+`Group` removes invisible Unicode format characters (`\p{Cf}`) and normalizes whitespace before rejecting blank names and comparing names ignoring case. `Role.normalize` removes the same format characters before collapsing Unicode whitespace; stored role equality remains case-sensitive. `ParserUtil.parseGroups` builds a set, so repeating `g/Choir g/choir` records one group. `add` may omit all groups. `edit` preserves groups unless `g/` is supplied; named groups replace the entire set, and a single empty `g/` clears it. An empty value mixed with named groups is rejected.
 
-For older JSON files, `JsonAdaptedPerson` omits a Unicode-space-only group that earlier versions accepted, preserving the member and its remaining groups. New commands still reject such blank group names; null and previously invalid blank JSON group entries remain invalid data.
+For older JSON files, `JsonAdaptedPerson` omits groups and roles made only of Unicode spaces or invisible format characters that earlier versions accepted, preserving the member, record ID and remaining valid values. Group names that become equal after normalization are stored once. New commands still reject such blank values; null group entries and previously invalid blank JSON values remain invalid data.
 
 `Person` keeps a defensive copy of its group set and exposes an unmodifiable view. JSON saves group names and defaults a missing groups field to an empty set for older files. `PersonCard` renders sorted group names as separate, wrapping labels below a `Groups:` heading. The whole section is hidden and unmanaged when empty. This keeps a group containing a comma distinguishable from multiple groups. Instrument and group badges are constrained to their flow pane's width, and list cells follow the viewport width so long values wrap within the card.
 
@@ -281,6 +288,20 @@ Before tokenizing, the parser reuses `ArgumentTokenizer.verifyNoUnknownPrefixes`
 
 The command replaces the predicate on the full directory's `FilteredList`, reports its match count, and leaves stored records unchanged. `list` restores all records. Parser, predicate, and command tests cover repeated criteria, invalid inputs, threshold boundaries, matching years on the correct instrument, combined criteria, people without instruments or groups, group-name normalization and whole-name matching, empty results, and searches after earlier filters.
 
+The following two sequence diagrams trace a successful `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra` command. Parsing and execution are shown separately, as for `find`. In both diagrams, `criteria` is shorthand for the five sets of statuses, instrument criteria, member types, roles, and groups passed to the constructors.
+
+First, `LogicManager` calls `AddressBookParser.parseCommand`, which delegates to `FilterCommandParser` to validate the criteria and return the parsed command `f`. No predicate is created during parsing.
+
+![Filter command parsing: criteria validation and command creation](images/FilterParsingSequenceDiagram.png)
+
+[Open the parsing diagram at full size](images/FilterParsingSequenceDiagram.png). [PlantUML source](diagrams/FilterParsingSequenceDiagram.puml).
+
+Execution then continues in `LogicManager`. The command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`, and `p:Predicate` is the predicate created during execution. Model snapshots and UI list-change notifications are omitted.
+
+![Filter command execution: predicate creation, filtered-list evaluation, result count, and feedback](images/FilterSequenceDiagram.png)
+
+[Open the execution diagram at full size](images/FilterSequenceDiagram.png). [PlantUML source](diagrams/FilterSequenceDiagram.puml).
+
 ### Exporting current results
 
 `AddressBookParser` delegates `export [f/FIELD]...` to `ExportCommandParser`. With no arguments, the parser creates a default `ExportCommand` using `ExportField.DEFAULT_FIELDS`: name, phone, email, status, memberType, role, instruments, and groups. Otherwise, it tokenizes repeated `f/` values, matches their exact case-sensitive names against `ExportField` headers, and preserves the requested order. Unsupported, empty or repeated field selections and unexpected arguments cause a `ParseException` before execution, so no file is created.
@@ -301,39 +322,33 @@ The following sequence diagram traces execution of a parsed `export f/name f/pho
 
 [Open the sequence diagram at full size](images/ExportSequenceDiagram.png). [PlantUML source](diagrams/ExportSequenceDiagram.puml).
 
-The following sequence diagram traces `filter s/member i/Violin:3 ty/teacher r/Conductor g/Chamber Orchestra`, using all five supported fields. Parsing creates a `FilterCommand` containing the criteria; executing that command creates the `PersonMatchesFilterPredicate` and applies it through `ModelManager.updateFilteredPersonList`. The participant `m:Model` is implemented by `ModelManager`, and `p:Predicate` is the `PersonMatchesFilterPredicate` created during execution. The diagram uses `criteria` as shorthand for the five sets passed to the command and predicate constructors.
-
-![Sequence diagram for filter, showing criteria parsing, predicate creation during execution, filtered-list evaluation, and the result count](images/FilterSequenceDiagram.png)
-
-[Open the sequence diagram at full size](images/FilterSequenceDiagram.png). [PlantUML source](diagrams/FilterSequenceDiagram.puml). The diagram summarizes successful parsing in a reference frame so the execution flow remains readable at the guide's width; model snapshots and UI list-change notifications are omitted.
-
 ### Importing people from CSV
 
-`AddressBookParser` routes `import FILE_NAME` to `ImportCommandParser`. The parser accepts a non-empty `.csv` file name without path separators, so `ImportCommand` always resolves it inside the `imports` directory.
+`AddressBookParser` routes `import FILE_NAME` to `ImportCommandParser`. The parser requires a non-empty `.csv` file name rather than a path and validates it with `FileUtil.isValidWindowsFileName`. This rejects reserved characters, control characters, names ending with a space or period, and reserved names such as `CON` and `COM1`, so `ImportCommand` resolves an accepted name against the `imports` directory.
 
 `ImportCommand` asks `CsvImporter.importPeopleWithLineNumbers` to read the entire CSV before changing the model. `CsvImporter` validates the required header and eight-column layout, then constructs `Person` objects using the existing model value objects such as `Name`, `Phone`, `Email`, `Status`, and `MemberType`. This reuses the application's validation rules instead of duplicating them in the CSV layer. It returns the complete imported list with each record's starting physical line number only when every row is valid, including records spanning multiple lines.
 
-After parsing succeeds, `ImportCommand` copies the current address book and checks every imported person's recorded details against the copy before adding it. This detects identical records against both existing members and earlier CSV rows without mutating the model, while allowing different records to share names or phone numbers. Duplicate feedback identifies the person's name and starting physical line number. Only when all additions succeed does it replace the model's address book with the copy and show the full directory. Consequently, invalid CSV data and identical records fail the import atomically: the current directory and active filter remain unchanged.
+After parsing succeeds, `ImportCommand` copies the current address book and checks every imported person's recorded details against the original directory before adding it to the copy. A matching existing record fails the import, while a row matching an earlier CSV row is added with a fresh record ID and possible-duplicate warning. Duplicate failure feedback identifies the person's name and starting physical line number. Only when all additions succeed does the command replace the model's address book with the copy and show the full directory. Consequently, invalid CSV data and records matching the original directory fail the import atomically: the current directory and active filter remain unchanged.
 
 The following sequence diagram focuses on a successful `ImportCommand.execute(...)` call. Command parsing, field-level CSV parsing, error handling, and `LogicManager`'s generic save-and-rollback handling are omitted; they do not affect the command's validate-then-replace behavior.
 
 ![Import command sequence diagram](images/ImportSequenceDiagram.png)
 
-`ImportCommandTest` and `ImportCommandIntegrationTest` cover successful imports, duplicate handling, invalid data, malformed row layouts, optional fields, and atomic failures. `AddressBookParserTest` verifies that the command is recognised.
+`ImportCommandTest` and `ImportCommandIntegrationTest` cover successful imports, existing-record rejection, repeated-row warnings, default export/import round trips, invalid data, malformed row layouts, optional fields, and atomic failures. `AddressBookParserTest` verifies that the command is recognised.
 
 ### Undo/redo feature
 
 #### Implementation
 
-The undo/redo mechanism is facilitated by `VersionedAddressBook`. It extends `AddressBook` with an undo/redo history, stored internally as an `addressBookStateList` and `currentStatePointer`. Additionally, it implements the following operations:
+The undo/redo mechanism is facilitated by `VersionedAddressBook`. It extends `AddressBook` with an undo/redo history, stored internally as an `addressBookStateList` and `currentStatePointer`. A parallel `changeDescriptionList` holds the command text that led to each state, so that `undo` and `redo` can tell the user which changes they reverted or restored. Additionally, it implements the following operations:
 
-* `VersionedAddressBook#commit()` — Discards any undone states, then records the current address book state in its history, unless the data is unchanged.
-* `VersionedAddressBook#undo()` — Reverts the most recent change by restoring an earlier state from its history.
-* `VersionedAddressBook#redo()` — Restores the most recently undone state from its history.
+* `VersionedAddressBook#commit(description)` — Discards any undone states, then records the current address book state and the description of the change that led to it, unless the data is unchanged.
+* `VersionedAddressBook#undo()` — Reverts the most recent change by restoring an earlier state from its history, and returns that change's description.
+* `VersionedAddressBook#redo()` — Restores the most recently undone state from its history, and returns that change's description.
 * `VersionedAddressBook#canUndo()` and `VersionedAddressBook#canRedo()` — Return whether there is a change to revert or restore.
 * `VersionedAddressBook#getUndoableCount()` and `VersionedAddressBook#getRedoableCount()` — Return how many changes can be reverted or restored one after another.
 
-These operations are exposed in the `Model` interface as `Model#commitAddressBook()`, `Model#undoAddressBook()`, `Model#redoAddressBook()`, `Model#canUndoAddressBook()`, `Model#canRedoAddressBook()`, `Model#getUndoableChangeCount()` and `Model#getRedoableChangeCount()` respectively.
+These operations are exposed in the `Model` interface as `Model#commitAddressBook(description)`, `Model#undoAddressBook()`, `Model#redoAddressBook()`, `Model#canUndoAddressBook()`, `Model#canRedoAddressBook()`, `Model#getUndoableChangeCount()` and `Model#getRedoableChangeCount()` respectively.
 
 Given below is an example usage scenario and how the undo/redo mechanism behaves at each step.
 
@@ -341,7 +356,7 @@ Step 1. The user launches the application for the first time. The `VersionedAddr
 
 ![UndoRedoState0](images/UndoRedoState0.png)
 
-Step 2. The user executes `delete 5` command to delete the 5th person in the address book. `LogicManager` executes the command and, after the address book is saved to storage successfully, calls `Model#commitAddressBook()`, causing the modified state of the address book to be saved in the `addressBookStateList`, and the `currentStatePointer` is shifted to the newly inserted address book state.
+Step 2. The user executes `delete 5` command to delete the 5th person in the address book. `LogicManager` executes the command and, after the address book is saved to storage successfully, calls `Model#commitAddressBook("delete 5")` with the command text, causing the modified state of the address book to be saved in the `addressBookStateList`, and the `currentStatePointer` is shifted to the newly inserted address book state.
 
 ![UndoRedoState1](images/UndoRedoState1.png)
 
@@ -353,7 +368,7 @@ Step 3. The user executes `add n/David …​` to add a new person. `LogicManage
 
 </div>
 
-Step 4. The user now decides that adding the person was a mistake, and decides to undo that action by executing the `undo` command. The `undo` command calls `Model#undoAddressBook()`, which shifts the `currentStatePointer` once to the left, pointing it to the previous address book state, and restores the address book to that state. The full member list is then shown.
+Step 4. The user now decides that adding the person was a mistake, and decides to undo that action by executing the `undo` command. The `undo` command calls `Model#undoAddressBook()`, which shifts the `currentStatePointer` once to the left, pointing it to the previous address book state, and restores the address book to that state. It returns the description of the reverted change, so the result is `Undid the most recent change: add n/David …​`. The full member list is then shown.
 
 ![UndoRedoState3](images/UndoRedoState3.png)
 
@@ -497,32 +512,30 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to add a member.
-2.  HiveMind requests the member's name and contact details, and any membership or musical details to record.
-3.  Society coordinator supplies the requested details.
-4.  HiveMind adds the member to the directory and shows the saved record.
+1.  Society coordinator submits an `add` command containing the required member details and any optional details to record.
+2.  HiveMind adds the member to the directory and shows the saved record.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that a required detail is missing or a supplied detail is invalid.
+* 2a. HiveMind detects that a required detail is missing or a supplied detail is invalid.
 
-    * 3a1. HiveMind shows an error message describing the problem.
-    * 3a2. Society coordinator supplies corrected details.
+    * 2a1. HiveMind shows an error message describing the problem.
+    * 2a2. Society coordinator resubmits the complete command with corrected details.
 
-      Steps 3a1-3a2 are repeated until the supplied details are valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the supplied details are valid.
+      Use case resumes at step 2.
 
-* 3b. HiveMind detects that the supplied name or phone number matches an existing record.
+* 2b. HiveMind detects that the supplied name or phone number matches an existing record.
 
-    * 3b1. HiveMind warns the society coordinator about each possible duplicate.
+    * 2b1. HiveMind warns the society coordinator about each possible duplicate.
 
-      Use case resumes at step 4.
+      Use case resumes at step 2.
 
-* 4a. HiveMind cannot save the updated directory.
+* 2c. HiveMind cannot save the updated directory.
 
-    * 4a1. HiveMind shows an error message informing the society coordinator that the new record was not saved.
+    * 2c1. HiveMind shows an error message informing the society coordinator that the new record was not saved.
 
       Use case ends.
 
@@ -534,34 +547,32 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to update a member's recorded details.
-2.  HiveMind requests the member to update and the details to change.
-3.  Society coordinator identifies the member and supplies the new details, such as contact, membership, or musical information.
-4.  HiveMind updates the supplied details, leaves other details unchanged, and shows the updated record.
+1.  Society coordinator submits an `edit` command containing the member's displayed index and the details to change.
+2.  HiveMind updates the supplied details, leaves other details unchanged, and shows the updated record.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
+* 2a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
 
-    * 3a1. HiveMind shows an error message and requests a valid selection.
-    * 3a2. Society coordinator identifies a member in the displayed list.
+    * 2a1. HiveMind shows an error message describing the invalid selection.
+    * 2a2. Society coordinator resubmits the complete command with a valid displayed index.
 
-      Steps 3a1-3a2 are repeated until the selection is valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the selection is valid.
+      Use case resumes at step 2.
 
-* 3b. HiveMind detects that no updated detail was supplied or a supplied detail is invalid.
+* 2b. HiveMind detects that no updated detail was supplied or a supplied detail is invalid.
 
-    * 3b1. HiveMind shows an error message describing the problem.
-    * 3b2. Society coordinator supplies corrected details.
+    * 2b1. HiveMind shows an error message describing the problem.
+    * 2b2. Society coordinator resubmits the complete command with corrected details.
 
-      Steps 3b1-3b2 are repeated until the supplied details are valid.
-      Use case resumes at step 4.
+      Steps 2b1-2b2 are repeated until the supplied details are valid.
+      Use case resumes at step 2.
 
-* 4a. HiveMind cannot save the updated directory.
+* 2c. HiveMind cannot save the updated directory.
 
-    * 4a1. HiveMind shows an error message informing the society coordinator that the change was not saved.
+    * 2c1. HiveMind shows an error message informing the society coordinator that the change was not saved.
 
       Use case ends.
 
@@ -573,26 +584,24 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to remove an obsolete or incorrectly added member record.
-2.  HiveMind requests the member to remove.
-3.  Society coordinator identifies the member in the displayed list.
-4.  HiveMind removes the member's record from the directory and confirms which member was removed.
+1.  Society coordinator submits a `delete` command containing the member's displayed index.
+2.  HiveMind removes the member's record from the directory and confirms which member was removed.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
+* 2a. HiveMind detects that the selection is invalid or the member does not exist in the displayed list.
 
-    * 3a1. HiveMind shows an error message and requests a valid selection.
-    * 3a2. Society coordinator identifies a member in the displayed list.
+    * 2a1. HiveMind shows an error message describing the invalid selection.
+    * 2a2. Society coordinator resubmits the complete command with a valid displayed index.
 
-      Steps 3a1-3a2 are repeated until the selection is valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the selection is valid.
+      Use case resumes at step 2.
 
-* 4a. HiveMind cannot save the updated directory.
+* 2b. HiveMind cannot save the updated directory.
 
-    * 4a1. HiveMind shows an error message informing the society coordinator that the deletion was not saved.
+    * 2b1. HiveMind shows an error message informing the society coordinator that the deletion was not saved.
 
       Use case ends.
 
@@ -604,26 +613,24 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 
 **MSS:**
 
-1.  Society coordinator requests to shortlist suitable players.
-2.  HiveMind requests the filtering criteria.
-3.  Society coordinator supplies one or more criteria, such as status, instrument, or musical experience.
-4.  HiveMind shows the members who satisfy the criteria.
+1.  Society coordinator submits a `filter` command containing one or more criteria, such as status, instrument, or musical experience.
+2.  HiveMind shows the members who satisfy the criteria.
 
     Use case ends.
 
 **Extensions:**
 
-* 3a. HiveMind detects that no criterion was supplied or a supplied criterion is invalid.
+* 2a. HiveMind detects that no criterion was supplied or a supplied criterion is invalid.
 
-    * 3a1. HiveMind shows an error message describing the problem.
-    * 3a2. Society coordinator supplies corrected criteria.
+    * 2a1. HiveMind shows an error message describing the problem.
+    * 2a2. Society coordinator resubmits the complete command with corrected criteria.
 
-      Steps 3a1-3a2 are repeated until the supplied criteria are valid.
-      Use case resumes at step 4.
+      Steps 2a1-2a2 are repeated until the supplied criteria are valid.
+      Use case resumes at step 2.
 
-* 4a. No member satisfies the criteria.
+* 2b. No member satisfies the criteria.
 
-    * 4a1. HiveMind informs the society coordinator that no members were found.
+    * 2b1. HiveMind informs the society coordinator that no members were found.
 
       Use case ends.
 
@@ -773,6 +780,8 @@ Use a disposable directory for these checks so the test records do not affect yo
    Expected: Each result shows the appropriate members with complete card details and indices starting at `1`; the no-match search shows no cards; `list` restores all members in insertion order.
 1. Add a member with a long name, email and role, and several instruments. Resize the window narrower and scroll through the list.<br>
    Expected: The name remains prominent and the membership badges remain readable without relying on colour. Text wraps without overlapping other fields, instrument labels flow onto additional rows, and all recorded details remain accessible. Check both full and empty optional fields again after scrolling.
+1. Run `add n/Test Member p/91234567 e/thisisaverylongemailaddressusedtotestoverflowinaction@example.com s/member r/percussion-section-leader-with-a-very-long-title`. Narrow the member list to about 350 pixels, then hover over the email and role in turn.<br>
+   Expected: Each tooltip shows the complete field text, including the full email domain and the end of the role. Resize the window wider and narrower and repeat; the tooltips still show the full values. A member without a role still has no role row.
 1. Run `add n/Card Width p/91234567 e/music.coordinator.long.contact.address@example.com s/member r/Student Coordinator for the University Chamber Orchestra i/Historical Keyboard and String Instrument Ensemble Performance Specialisation:12 g/University Chamber Orchestra Alumni and Student Combined Performance Group`. Resize the window to its minimum 450 × 400, then widen and narrow it again.<br>
    Expected: The full instrument name and `12 yrs` remain readable on wrapped lines, as does the group name. Neither badge pushes contact details or other card content beyond the visible right edge. Scroll vertically if the card is taller than the available area.
 
@@ -820,6 +829,30 @@ Use a disposable directory with only these four records, added in this order:
    Expected: The empty results stay empty and sorting reports success.
 1. Close and reopen the app.<br>
    Expected: The remaining records appear in stored directory order, Amy, Bob, alice. Status changes and deletion persist, but sorting does not.
+
+### Filtering members: `filter`
+
+Use Java 25 and the released JAR in a disposable writable folder. Run `clear`, then add these records in order:
+
+* `add n/Alicia Tan p/90000001 e/alicia@example.com s/member ty/teacher r/Conductor i/Violin:3 g/Orchestra`
+* `add n/Ben Lee p/90000002 e/ben@example.com s/active-alumnus ty/teacher r/Conductor i/Cello:5 g/Training`
+* `add n/Chloe Lim p/90000003 e/chloe@example.com s/member ty/teacher r/Conductor i/Violin:2 g/Orchestra`
+* `add n/Daniel Koh p/90000004 e/daniel@example.com s/inactive-alumnus ty/teacher r/Conductor i/Violin:4 g/Orchestra`
+
+1. Run `filter s/member s/active-alumnus i/Violin:3 i/Cello:5 ty/teacher r/Conductor g/Orchestra g/Training`.<br>
+   Expected: Only Alicia and Ben appear, numbered 1 and 2. Repeated statuses, instruments and groups use OR;
+   different fields use AND. Chloe is below the required violin experience; Daniel has an excluded status.
+1. Run `filter i/Violin:3`.<br>
+   Expected: Only Alicia and Daniel appear. The `MIN_YEARS` boundary is inclusive: Alicia's 3 years and Daniel's
+   4 years qualify, while Chloe's 2 years do not. Daniel reappears because this command replaces the previous filter.
+1. Run `filter i/Violin:abc`.<br>
+   Expected: The error is `Minimum years should be a whole number from 0 to 99`. Alicia and Daniel remain displayed,
+   and no member record changes.
+1. Run `filter i/Flute`.<br>
+   Expected: No cards appear, the count reads `Showing 0 of 4 members`, and the list shows
+   `No matching members. Enter list to show everyone.`
+1. Run `list`.<br>
+   Expected: All four original records reappear in insertion order with their details unchanged.
 
 ### Exporting current results
 
@@ -949,9 +982,9 @@ Use Java 25 and the released JAR in a disposable writable folder. These steps cl
 Start from the sample data in a disposable directory (delete `data/addressbook.json` before launching).
 
 1. Run `delete 1`, then `delete 1` again, then `undo 2`.<br>
-   Expected: `Undid the 2 most recent changes.` Alex Yeoh and Bernice Yu are back, and the full list is shown.
+   Expected: `Undid the 2 most recent changes, most recent first:` followed by `delete 1` on each of the next two lines. Alex Yeoh and Bernice Yu are back, and the full list is shown.
 1. Run `redo`, then `redo 1`.<br>
-   Expected: The first `redo` deletes Alex Yeoh again (the most recently undone change); the second deletes Bernice Yu again.
+   Expected: The first `redo` deletes Alex Yeoh again (the most recently undone change) and shows `Redid the most recently undone change: delete 1`; the second deletes Bernice Yu again.
 1. Run `undo 5`.<br>
    Expected: `Not enough changes to undo: only 2 can be undone.` Nothing changes.
 1. Run `undo 0`, `undo -1`, `undo two` and `undo 1 2`.<br>
