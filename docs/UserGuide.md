@@ -72,7 +72,7 @@ Command feedback has a **Success** label in green when a command completes and a
 * Items followed by `…`​ can appear zero or more times.<br>
   For example, `[i/INSTRUMENT:YEARS]…​` may be omitted, or written as `i/Violin:5` or `i/Violin:5 i/Piano:2`.
 
-* Parameters can be in any order. For `export`, their order determines the CSV column order.<br>
+* Prefixed parameters can be in any order. For `export`, their order determines the CSV column order. Positional parameters must stay in the position shown in the command format; for example, `INDEX` must precede the prefixed fields in `edit`.<br>
   For example, if the command specifies `n/NAME p/PHONE_NUMBER`, `p/PHONE_NUMBER n/NAME` is also acceptable.
 
 * A parameter value cannot contain a space followed by another prefix of the same command, as HiveMind reads that as the start of a new parameter.<br>
