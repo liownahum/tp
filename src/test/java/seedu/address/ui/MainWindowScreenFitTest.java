@@ -61,9 +61,10 @@ public class MainWindowScreenFitTest {
         runOnFxThread(() -> {
             Stage stage = createWindow(new GuiSettings());
             try {
-                stage.show();
+                assertTrue(stage.getMinHeight() <= 400, "The stage minimum must fit a small logical screen");
                 stage.setWidth(740);
                 stage.setHeight(400);
+                stage.show();
                 assertTrue(stage.getHeight() <= 401, "The window must shrink below 480 logical pixels");
                 Parent root = stage.getScene().getRoot();
                 root.applyCss();
