@@ -36,9 +36,9 @@ AddressBook .up.|> ReadOnlyAddressBook
 ModelManager .up.|> Model
 Model .right.> ReadOnlyUserPrefs
 Model .left.> ReadOnlyAddressBook
-ModelManager -left-> "1" VersionedAddressBook
+ModelManager -left-> "1    \n " VersionedAddressBook
 VersionedAddressBook -up-|> AddressBook
-ModelManager -right-> "1" UserPrefs
+ModelManager -right-> "    1\n " UserPrefs
 UserPrefs .up.|> ReadOnlyUserPrefs
 
 AddressBook *--> "1<U+00A0><U+00A0><U+00A0><U+00A0><U+00A0>" UniquePersonList
