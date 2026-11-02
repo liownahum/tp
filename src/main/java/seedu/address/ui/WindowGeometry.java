@@ -43,6 +43,7 @@ final class WindowGeometry {
         return new Rectangle2D(x, y, width, height);
     }
 
+    /** Returns the shared area, or zero when the window and display do not overlap. */
     private static double overlap(Rectangle2D window, Rectangle2D screen) {
         double width = Math.max(0, Math.min(window.getMaxX(), screen.getMaxX())
                 - Math.max(window.getMinX(), screen.getMinX()));
