@@ -916,6 +916,32 @@ Use Java 25 and the released JAR in a disposable writable folder. These steps cl
 1. Run `clear`, `undo`, then `redo`.<br>
    Expected: `clear` shows the empty-directory guidance, `undo` restores Alice with no guidance, and `redo` shows the empty-directory guidance again.
 
+### Editing status, type and role
+
+Use a disposable directory for these checks, as they clear test data. Start with `clear`.
+
+1. Run `add n/Mei Lin p/90000021 e/mei@example.com s/member r/Section Leader i/Violin:3 g/Orchestra`.<br>
+   Expected: The card shows the `Student` and `Member` badges, the role, the instrument and the group.
+1. Run `edit 1 s/active-alumnus ty/teacher`.<br>
+   Expected: The badges read `Teacher` and `Active alumnus`. The contact details, role, instrument and group are unchanged.
+1. Run `edit 1 s/Inactive-Alumnus ty/STUDENT`.<br>
+   Expected: The badges read `Student` and `Inactive alumnus`, as these values ignore case.
+1. Run `edit 1 r/`.<br>
+   Expected: The role is removed, leaving no blank row on the card.
+1. Run `edit 1 s/former`, `edit 1 ty/parent`, then `edit 1`.<br>
+   Expected: Each command fails and the card is unchanged. The errors are `Status should be member, active-alumnus, or inactive-alumnus`, `Member type should be student or teacher` and `At least one field to edit must be provided.`
+1. Run `undo`.<br>
+   Expected: `Section Leader` returns, as the failed commands are not changes to undo.
+
+### Opening help
+
+1. Run `help`.<br>
+   Expected: The feedback is `Opened help window.` A separate window shows the User Guide link.
+1. Select **Copy URL**, then paste into a browser.<br>
+   Expected: The User Guide opens.
+1. Close the Help Window, then press `F1`. Close it again, then select **Help** in the menu bar.<br>
+   Expected: Each action opens the Help Window. Member records and the displayed list do not change.
+
 ### Deleting a person
 
 1. Deleting a person while all persons are being shown
