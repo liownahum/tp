@@ -8,7 +8,7 @@ participant "m:Model" as Model MODEL_COLOR
 participant ":VersionedAddressBook" as VersionedAddressBook MODEL_COLOR
 end box
 
-[-> Model : undoAddressBook()
+[-> Model : undoAddressBook()<U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0>
 activate Model
 Model -> VersionedAddressBook : undo()
 activate VersionedAddressBook
@@ -30,7 +30,8 @@ deactivate VersionedAddressBook
 [<-- Model : description
 deactivate Model
 
-legend bottom
-One successful undo step; Logic repeats this for the requested count.
-endlegend
+note over Model, VersionedAddressBook
+One successful undo step; Logic repeats this
+for the requested count.
+end note
 @enduml

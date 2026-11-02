@@ -164,7 +164,7 @@ How the parsing works:
 ### Model component
 **API** : [`Model.java`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/model/Model.java)
 
-<img src="images/ModelClassDiagram.png" width="600" />
+<img src="images/ModelClassDiagram.png" width="770" />
 
 
 The `Model` component,
@@ -179,7 +179,7 @@ The `Model` component,
 
 **API** : [`Storage.java`](https://github.com/AY2627S1-CS2103T-T10-3/tp/blob/master/src/main/java/seedu/address/storage/Storage.java)
 
-<img src="images/StorageClassDiagram.png" width="550" />
+<img src="images/StorageClassDiagram.png" width="650" />
 
 The `Storage` component,
 * can save both address book data and user preference data in JSON format, and read them back into corresponding objects.
@@ -361,9 +361,13 @@ Step 4. The user now decides that adding the person was a mistake, and decides t
 
 </div>
 
-The following sequence diagram shows a successful `undo 2` operation through the `Logic` component. The command checks the available history before undoing either step, refreshes the full member list once, and saves once. It returns `false` from `recordsChange()`, so `LogicManager` does not commit a new history state. Model snapshots and save-failure rollback are omitted from the diagram; rollback is described in Step 3 above.
+The following sequence diagram shows how `undo 2` is parsed into an `UndoCommand`.
 
-![UndoSequenceDiagram](images/UndoSequenceDiagram-Logic.png)
+![Undo command parsing](images/UndoSequenceDiagram-Parsing.png)
+
+The next sequence diagram shows the successful `undo 2` operation through the `Logic` component, with parsing replaced by the `ref` frame. The command checks the available history before undoing either step, refreshes the full member list once, and saves once. It returns `false` from `recordsChange()`, so `LogicManager` does not commit a new history state. Model snapshots and save-failure rollback are omitted from the diagram; rollback is described in Step 3 above.
+
+![Undo command execution](images/UndoSequenceDiagram-Logic.png)
 
 The following diagram expands one successful `Model#undoAddressBook()` call. `VersionedAddressBook` checks `canUndo()`, decrements `currentStatePointer`, and restores the snapshot at that index. The Logic diagram repeats this model operation once per requested step; plain `undo` uses a count of 1, as in Step 4.
 
@@ -650,7 +654,7 @@ Priorities: High (must have), Medium (nice to have), Low (unlikely to have)
 * **Mainstream OS**: Windows, Linux, Unix, or macOS.
 * **Member**: A person who currently belongs to the CCA. In HiveMind, _member_ is also used loosely to mean any person in the directory, including alumni and teachers.
 * **Participation group**: A group of members formed for a particular piece, activity or training programme (e.g., a group of new members under training).
-* **Possible duplicate**: A person being added whose name or phone number matches that of an existing record. HiveMind warns the user but still adds the person, since two different people can share a name or a phone number.
+* **Possible duplicate**: A person being added or edited whose name or phone number matches that of an existing record. HiveMind warns the user but still adds or edits the person, since two different people can share a name or a phone number.
 * **Prefix**: The short label before a parameter in a command (e.g., `n/` in `n/Tan Wei Ming`) that tells HiveMind which field the value belongs to.
 * **Role**: A position a person holds in the CCA (e.g., Section Leader, Conductor). Roles are free text, since each CCA names its roles differently.
 * **Status**: Whether a person is a _member_, an _active alumnus_ or an _inactive alumnus_ of the CCA.

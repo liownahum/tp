@@ -3,21 +3,23 @@
 skinparam arrowThickness 1.1
 skinparam arrowColor STORAGE_COLOR
 skinparam classBackgroundColor STORAGE_COLOR
+skinparam nodesep 40
+skinparam ranksep 50
 
-package Storage as StoragePackage {
-
-Class "<<interface>>\nStorage" as Storage
-Class StorageManager
-
-package "UserPrefs Storage" #F4F6F6{
-Class JsonUserPrefsStorage
-}
+package "Storage<U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0>" as StoragePackage {
 
 package "AddressBook Storage" #F4F6F6{
 Class JsonAddressBookStorage
 Class JsonSerializableAddressBook
 Class JsonAdaptedPerson
 Class JsonAdaptedInstrument
+}
+
+Class "<<interface>>\nStorage" as Storage
+Class StorageManager
+
+package "<U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0>UserPrefs Storage" #F4F6F6{
+Class JsonUserPrefsStorage
 }
 
 package "CSV Storage" #F4F6F6{
@@ -36,8 +38,8 @@ Class HiddenOutside #FFFFFF
 HiddenOutside ..> Storage
 
 StorageManager .up.|> Storage
-StorageManager -down-> "1" JsonUserPrefsStorage
-StorageManager -down-> "1" JsonAddressBookStorage
+StorageManager -down-> "1<U+00A0><U+00A0><U+00A0><U+00A0><U+00A0>" JsonUserPrefsStorage
+StorageManager -left-> "1" JsonAddressBookStorage
 
 JsonAddressBookStorage ..> JsonSerializableAddressBook
 JsonSerializableAddressBook --> "*" JsonAdaptedPerson
@@ -46,8 +48,8 @@ JsonAdaptedPerson --> "*" JsonAdaptedInstrument
 ImportCommand .up.> CsvImporter : <<call>>
 ExportCommand .up.> CsvExporter : <<call>>
 
-CsvImporter -[hidden]right- CsvExporter
 ImportCommand -[hidden]right- ExportCommand
-StoragePackage -[hidden]down- LogicPackage
+JsonUserPrefsStorage -[hidden]down--- CsvImporter
+CsvImporter -[hidden]right- CsvExporter
 
 @enduml
