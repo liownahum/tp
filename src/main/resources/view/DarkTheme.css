@@ -355,7 +355,6 @@
 .list-cell .member-name {
     -fx-font-family: "Segoe UI Semibold";
     -fx-font-size: 19px;
-    -fx-font-weight: bold;
     -fx-text-fill: #ffffff;
     -fx-opacity: 1;
 }

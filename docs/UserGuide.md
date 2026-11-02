@@ -103,7 +103,7 @@ Command recall is separate from `undo` and `redo`: it recalls text and does not 
 
 ### Viewing help: `help`
 
-Shows a message explaining how to access the help page.
+Opens a window with a link to this User Guide. Select **Copy URL** to copy the link. You can also press `F1`.
 
 ![help message](images/helpMessage.png)
 
@@ -215,13 +215,12 @@ Format: `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [s/STATUS] [ty/TYPE] [r/
 * Edits the person at the specified `INDEX`. The index refers to the index number shown in the displayed person list. The index **must be a positive integer** 1, 2, 3, …​
 * At least one of the optional fields must be provided.
 * Existing values will be updated to the input values.
-* `s/STATUS` and `ty/TYPE` accept the same values as in `add`: `member`, `active-alumnus`, or `inactive-alumnus` for status, and `student` or `teacher` for type, ignoring case.
+* `s/STATUS` and `ty/TYPE` accept the same values as in `add`.
 * `r/ROLE` replaces the person's role. To remove the role, enter `r/` without a role after it.
 * If you edit the name or phone number and it then matches another member's name ignoring case, or their phone number, HiveMind shows a possible-duplicate warning for each such member, as `add` does, and still makes the edit.
 * Fields that are not specified are preserved. For example, editing a person's status keeps their contact details, type, role, instruments, and groups.
-* Instruments are preserved when they are not edited.
 * When editing instruments, all of the person's existing instruments are replaced; adding instruments is not cumulative.
-* To remove all of a person's instruments, enter `i/` without an instrument after it.
+* To remove all of a person's instruments, enter `i/` without an instrument after it. Mixing an empty `i/` with named instruments is invalid.
 * When editing groups, all existing groups are replaced by the supplied `g/GROUP` values. To remove all groups, enter `g/` alone. Mixing an empty `g/` with named groups is invalid.
 * After an edit, the full member list is shown, even if the list was showing the results of `find` or `filter`. Run the `find` or `filter` command again to return to those results.
 
@@ -383,7 +382,7 @@ Format: `redo [COUNT]`
 * Changes are restored in the reverse order of undoing: the most recently undone change comes back first.
 * The result lists the command of each restored change as you typed it, in the order restored.
 * If fewer than `COUNT` undone changes can be restored, nothing is redone and HiveMind tells you how many can be, or that there is no undone change to redo.
-* Once you make a new change (e.g. `add`, `edit`, `delete`, `clear` or `import`) after an `undo`, the undone changes can no longer be redone. This also applies to an `edit` that leaves the member's details unchanged.
+* Once you make a new change (e.g. `add`, `edit`, `delete`, `clear` or `import`) after an `undo`, the undone changes can no longer be redone. This also applies to an `edit` that leaves the member's details unchanged, and to a `clear` when the list is already empty.
 * After a redo, the full member list is shown.
 
 Examples:
@@ -465,4 +464,5 @@ Action | Format, Examples
 **Undo** | `undo [COUNT]`<br> e.g., `undo 2`
 **Redo** | `redo [COUNT]`<br> e.g., `redo 2`
 **Help** | `help`
+**Exit** | `exit`
 **Import** | `import FILE_NAME`<br> e.g., `import members.csv`

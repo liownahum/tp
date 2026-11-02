@@ -2,44 +2,37 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.FlowPane?>
-<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <HBox id="cardPane" fx:id="cardPane" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
-  <GridPane HBox.hgrow="ALWAYS">
-    <columnConstraints>
-      <ColumnConstraints hgrow="SOMETIMES" minWidth="10" prefWidth="150" />
-    </columnConstraints>
-    <VBox fx:id="cardContent" alignment="CENTER_LEFT" minHeight="105" minWidth="0" spacing="6"
-          GridPane.columnIndex="0">
-      <padding>
-        <Insets top="10" right="14" bottom="10" left="14" />
-      </padding>
-      <HBox spacing="6" alignment="TOP_LEFT">
-        <Label fx:id="id" styleClass="member-index">
-          <minWidth>
-            <!-- Ensures that the label text is never truncated -->
-            <Region fx:constant="USE_PREF_SIZE" />
-          </minWidth>
-        </Label>
-        <Label fx:id="name" text="\$first" styleClass="member-name" minWidth="0" wrapText="true" HBox.hgrow="ALWAYS" />
-      </HBox>
-      <FlowPane hgap="6" vgap="5">
-        <Label fx:id="memberType" styleClass="member-type-badge" />
-        <Label fx:id="membershipStatus" styleClass="member-status-badge" />
-      </FlowPane>
-      <Label fx:id="phone" styleClass="member-contact" text="\$phone" minWidth="0" wrapText="true" />
-      <Label fx:id="email" styleClass="member-contact" text="\$email" minWidth="0" wrapText="true" />
-      <Label fx:id="role" styleClass="member-detail" minWidth="0" wrapText="true" visible="false" managed="false" />
-      <FlowPane fx:id="instruments" minWidth="0" />
-      <VBox fx:id="groups" spacing="4" visible="false" managed="false">
-        <Label text="Groups:" styleClass="member-detail" />
-        <FlowPane fx:id="groupLabels" minWidth="0" />
-      </VBox>
+  <VBox fx:id="cardContent" alignment="CENTER_LEFT" minHeight="105" minWidth="0" spacing="6"
+        HBox.hgrow="ALWAYS">
+    <padding>
+      <Insets top="10" right="14" bottom="10" left="14" />
+    </padding>
+    <HBox spacing="6" alignment="TOP_LEFT">
+      <Label fx:id="id" styleClass="member-index">
+        <minWidth>
+          <!-- Ensures that the label text is never truncated -->
+          <Region fx:constant="USE_PREF_SIZE" />
+        </minWidth>
+      </Label>
+      <Label fx:id="name" text="\$first" styleClass="member-name" minWidth="0" wrapText="true" HBox.hgrow="ALWAYS" />
+    </HBox>
+    <FlowPane hgap="6" vgap="5">
+      <Label fx:id="memberType" styleClass="member-type-badge" />
+      <Label fx:id="membershipStatus" styleClass="member-status-badge" />
+    </FlowPane>
+    <Label fx:id="phone" styleClass="member-contact" text="\$phone" minWidth="0" wrapText="true" />
+    <Label fx:id="email" styleClass="member-contact" text="\$email" minWidth="0" wrapText="true" />
+    <Label fx:id="role" styleClass="member-detail" minWidth="0" wrapText="true" visible="false" managed="false" />
+    <FlowPane fx:id="instruments" minWidth="0" />
+    <VBox fx:id="groups" spacing="4" visible="false" managed="false">
+      <Label text="Groups:" styleClass="member-detail" />
+      <FlowPane fx:id="groupLabels" minWidth="0" />
     </VBox>
-  </GridPane>
+  </VBox>
 </HBox>

@@ -1,0 +1,36 @@
+@startuml
+!include style.puml
+skinparam ArrowFontStyle plain
+skinparam sequenceMessageAlign left
+skinparam BoxPadding 10
+
+box Logic LOGIC_COLOR_T1
+participant ":LogicManager" as LogicManager LOGIC_COLOR
+participant ":AddressBook\nParser" as AddressBookParser LOGIC_COLOR
+participant ":UndoCommand\nParser" as UndoCommandParser LOGIC_COLOR
+participant "u:UndoCommand" as UndoCommand LOGIC_COLOR
+end box
+
+group sd [Parse "undo 2" into u]
+activate LogicManager
+    LogicManager -> AddressBookParser : parseCommand("undo 2")
+    activate AddressBookParser
+    create UndoCommandParser
+    AddressBookParser -> UndoCommandParser : create
+    UndoCommandParser --> AddressBookParser
+    AddressBookParser -> UndoCommandParser : parse(" 2")
+    activate UndoCommandParser
+    note over UndoCommandParser
+    parseCount(" 2") = 2
+    Default count = 1.
+    end note
+    create UndoCommand
+    UndoCommandParser -> UndoCommand : new UndoCommand(2)
+    UndoCommandParser <-- UndoCommand : u
+    UndoCommandParser --> AddressBookParser : u
+    deactivate UndoCommandParser
+    AddressBookParser --> LogicManager : u
+    deactivate AddressBookParser
+deactivate LogicManager
+end
+@enduml
