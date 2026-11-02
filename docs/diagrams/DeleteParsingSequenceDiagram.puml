@@ -4,13 +4,14 @@ skinparam ArrowFontStyle plain
 skinparam sequenceMessageAlign left
 skinparam BoxPadding 10
 
+' Padding keeps the incoming call label inside the Logic box.
 box Logic LOGIC_COLOR_T1
-participant ":AddressBook\nParser" as AddressBookParser LOGIC_COLOR
+participant "            :AddressBookParser            " as AddressBookParser LOGIC_COLOR
 participant ":DeleteCommand\nParser" as DeleteCommandParser LOGIC_COLOR
 participant "d:DeleteCommand" as DeleteCommand LOGIC_COLOR
 end box
 
-[-> AddressBookParser : parseCommand("delete 1")
+[-> AddressBookParser : parseCommand(\n"delete 1")
 activate AddressBookParser
 
 create DeleteCommandParser

@@ -5,8 +5,9 @@ skinparam sequenceMessageAlign left
 skinparam BoxPadding 3
 skinparam SequenceReferenceBackgroundColor transparent
 
+' Padding keeps the incoming call label inside the Logic box.
 box Logic LOGIC_COLOR_T1
-participant ":LogicManager" as LogicManager LOGIC_COLOR
+participant "      :LogicManager      " as LogicManager LOGIC_COLOR
 participant "d:DeleteCommand" as DeleteCommand LOGIC_COLOR
 participant "r:\nCommandResult" as CommandResult LOGIC_COLOR
 end box
@@ -15,7 +16,7 @@ box Model MODEL_COLOR_T1
 participant "m:Model" as Model MODEL_COLOR
 end box
 
-[-> LogicManager : execute("delete 1")
+[-> LogicManager : execute(\n"delete 1")
 activate LogicManager
 
 ref over LogicManager, DeleteCommand
