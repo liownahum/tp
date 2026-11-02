@@ -105,7 +105,8 @@ public class CsvExporter {
             }
 
             try {
-                return Files.move(temporaryPath, outputPath, StandardCopyOption.REPLACE_EXISTING);
+                return Files.move(temporaryPath, outputPath,
+                        StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
                 Files.deleteIfExists(outputPath);
                 throw e;
