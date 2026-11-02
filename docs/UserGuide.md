@@ -467,4 +467,5 @@ Action | Format, Examples
 **Undo** | `undo [COUNT]`<br> e.g., `undo 2`
 **Redo** | `redo [COUNT]`<br> e.g., `redo 2`
 **Help** | `help`
+**Exit** | `exit`
 **Import** | `import FILE_NAME`<br> e.g., `import members.csv`

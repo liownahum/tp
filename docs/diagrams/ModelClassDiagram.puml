@@ -11,6 +11,7 @@ Class "<<interface>>\nReadOnlyAddressBook" as ReadOnlyAddressBook
 Class "<<interface>>\nReadOnlyUserPrefs" as ReadOnlyUserPrefs
 Class "<<interface>>\nModel" as Model
 Class AddressBook
+Class VersionedAddressBook
 Class ModelManager
 Class UserPrefs
 
@@ -25,18 +26,18 @@ Class Role
 Class Instrument
 Class Group
 
-Class I #FFFFFF
 }
 
 Class HiddenOutside #FFFFFF
-HiddenOutside ..> Model
+HiddenOutside ...> Model
 
 AddressBook .up.|> ReadOnlyAddressBook
 
 ModelManager .up.|> Model
 Model .right.> ReadOnlyUserPrefs
 Model .left.> ReadOnlyAddressBook
-ModelManager -left-> "1" AddressBook
+ModelManager -left-> "1" VersionedAddressBook
+VersionedAddressBook -up-|> AddressBook
 ModelManager -right-> "1" UserPrefs
 UserPrefs .up.|> ReadOnlyUserPrefs
 
@@ -51,8 +52,7 @@ Person *--> "0..1<U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0><U+00A0
 Person *--> "*" Instrument
 Person *--> "*" Group
 
-Person -[hidden]up--> I
-UniquePersonList -[hidden]right-> I
+UniquePersonList -[hidden]right-> VersionedAddressBook
 
 Name -[hidden]right-> Phone
 Phone -[hidden]right-> Email
