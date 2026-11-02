@@ -148,14 +148,9 @@ Imports people from a CSV file in the `imports` folder. The imported people are 
 
 Format: `import FILE_NAME`
 
-Place the CSV file in the `imports` folder inside HiveMind's home folder, then provide its file name rather than a path.
-The file name must include the `.csv` extension and be a valid Windows file name. It cannot contain the reserved
-characters `\`, `/`, `:`, `*`, `?`, `"`, `<`, `>` or `|`, contain control characters, end with a space or period, or use
-a reserved name such as `CON.csv` or `COM1.csv`. For example, use `import members.csv` for a file named `members.csv`
-in that folder.
+Place the CSV file in the `imports` folder inside HiveMind's home folder, then provide its file name rather than a path. The file name must include the `.csv` extension and be a valid Windows file name. It cannot contain the reserved characters `\`, `/`, `:`, `*`, `?`, `"`, `<`, `>` or `|`, contain control characters, end with a space or period, or use a reserved name such as `CON.csv` or `COM1.csv`. For example, use `import members.csv` for a file named `members.csv` in that folder.
 
-Save the file using UTF-8 encoding. For example, when using Microsoft Excel, select the **CSV UTF-8** format rather
-than the plain CSV format.
+Save the file using UTF-8 encoding. For example, when using Microsoft Excel, select the **CSV UTF-8** format rather than the plain CSV format.
 
 The CSV file must have this exact header and column order:
 

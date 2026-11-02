@@ -324,10 +324,7 @@ The following sequence diagram traces execution of a parsed `export f/name f/pho
 
 ### Importing people from CSV
 
-`AddressBookParser` routes `import FILE_NAME` to `ImportCommandParser`. The parser requires a non-empty `.csv` file
-name rather than a path and validates it with `FileUtil.isValidWindowsFileName`. This rejects reserved characters,
-control characters, names ending with a space or period, and reserved names such as `CON` and `COM1`, so
-`ImportCommand` resolves an accepted name against the `imports` directory.
+`AddressBookParser` routes `import FILE_NAME` to `ImportCommandParser`. The parser requires a non-empty `.csv` file name rather than a path and validates it with `FileUtil.isValidWindowsFileName`. This rejects reserved characters, control characters, names ending with a space or period, and reserved names such as `CON` and `COM1`, so `ImportCommand` resolves an accepted name against the `imports` directory.
 
 `ImportCommand` asks `CsvImporter.importPeopleWithLineNumbers` to read the entire CSV before changing the model. `CsvImporter` validates the required header and eight-column layout, then constructs `Person` objects using the existing model value objects such as `Name`, `Phone`, `Email`, `Status`, and `MemberType`. This reuses the application's validation rules instead of duplicating them in the CSV layer. It returns the complete imported list with each record's starting physical line number only when every row is valid, including records spanning multiple lines.
 
