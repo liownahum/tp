@@ -280,35 +280,26 @@ Format: `filter [s/STATUS]... [i/NAME[:MIN_YEARS]]... [ty/TYPE]... [r/ROLE]... [
 
 Shows people matching the specified criteria and reports the number of matches.
 
-* At least one criterion is required. Each field is optional; an omitted field imposes no restriction.
-* Introduce each member type with `ty/`: use `student` or `teacher`, ignoring case and surrounding whitespace. Repeated types use OR.
-* Introduce each role with `r/`, for example `r/Section Leader`. Matches the complete role, ignoring case and extra whitespace; `r/Leader` does not match `Section Leader`. Repeated roles use OR.
-* Blank or invalid types and blank roles are rejected. People without a role do not match an explicit role criterion.
-* Introduce each participation group with `g/`, for example `g/Chamber Orchestra`. Matches the complete group name, ignoring case, surrounding whitespace, and repeated whitespace, including Unicode spaces such as non-breaking spaces and en spaces; `g/Orchestra` does not match `Chamber Orchestra`.
-* Groups use OR: `filter g/Chamber Orchestra g/Training` matches people belonging to either group or both. Repeated names count once. Blank group names are rejected, and people without groups do not match an explicit group criterion.
-* Different fields use AND: `filter ty/teacher r/Conductor s/member i/Violin:3 g/Chamber Orchestra` matches member teachers who are conductors, have at least three years on violin, and belong to Chamber Orchestra.
-* Introduce each status with `s/`: use `member`, `active-alumnus`, or `inactive-alumnus`, ignoring case and surrounding whitespace.
-* Statuses are combined with OR: `filter s/member s/active-alumnus` matches current members or active alumni.
-* Introduce each instrument name with `i/`. `i/Violin` matches anyone who plays violin, regardless of experience.
-* Optionally specify minimum years: `i/Violin:3` matches people with **at least 3 years** on violin, including exactly 3. The minimum must be a whole number from 0 to 99; blank, negative, decimal, and out-of-range values are rejected.
-* Invalid minimum years, such as `filter i/Violin:abc`, report: `Minimum years should be a whole number from 0 to 99`.
-* The years must belong to the matching instrument: experience on piano cannot satisfy a violin threshold.
-* Instruments are combined with OR: `filter i/Violin i/Viola` matches people who play either instrument or both.
-* Each repeated instrument criterion is an alternative, even for the same name: `filter i/Violin:3 i/Violin:5` matches violin players with at least 3 years. A name-only criterion such as `i/Violin` accepts any years for that instrument.
-* Status and instrument groups are combined with AND: `filter s/member s/active-alumnus i/Violin:3 i/Viola:5` matches people who are members or active alumni and have at least 3 years on violin or at least 5 years on viola.
-* Matches complete instrument names, ignoring case, surrounding whitespace, and repeated whitespace, including Unicode spaces such as non-breaking spaces and en spaces: `guitar` matches `Guitar`, but not `Bass Guitar`.
-* Spaces after `i/` and around `:` are allowed: `filter i/ Violin : 3` is equivalent to `filter i/Violin:3`.
-* Supported prefixes are `s/`, `i/`, `ty/`, `r/`, and `g/`. Unsupported member-field prefixes `n/`, `p/`, and `e/` report an error naming the prefix and listing the accepted prefixes.
-* Before the first supported prefix, removed prefixes (`t/`, `a/`) and wrong-case member-field prefixes (such as `S/`) also report a prefix error. Inside values, these remain ordinary text to preserve names such as `r/Head of a/v` and `r/Student t/a`.
-* Other unknown prefix-like text also remains part of the preceding value. Thus, `filter r/Lead x/1` searches for the complete role `Lead x/1`, and `filter s/member t/friend` reports an invalid status. Remove accidental text or replace it with a supported prefix.
-* Searches the full directory, including after a previous `find` or `filter`.
-* If no person matches, the displayed list is empty and the result reports zero matches.
-* Stored records are unchanged. Use `list` to display everyone again.
+Provide at least one criterion. **Repeated values within a field use OR; different fields use AND.** A person must match at least one value in each specified field. Omitted fields impose no restriction.
+
+| Prefix | Accepted values | How matching works |
+| --- | --- | --- |
+| `s/STATUS` | `member`, `active-alumnus`, `inactive-alumnus` | Matches the status, ignoring case and surrounding whitespace. |
+| `i/NAME[:MIN_YEARS]` | A complete instrument name, optionally followed by `:` and a whole number from 0 to 99 | Matches the complete name, ignoring case and extra whitespace. Without a minimum, any experience qualifies; otherwise, requires **at least** that many years on that instrument. |
+| `ty/TYPE` | `student`, `teacher` | Matches the member type, ignoring case and surrounding whitespace. |
+| `r/ROLE` | A non-blank role, such as `Section Leader` | Matches the complete role, ignoring case and surrounding whitespace. `Leader` does not match `Section Leader`. People without a role do not match. |
+| `g/GROUP` | A non-blank group name, such as `Chamber Orchestra` | Matches the complete group name, ignoring case and extra whitespace. `Orchestra` does not match `Chamber Orchestra`. People without groups do not match. |
+
+Use the lowercase prefixes shown above. Invalid values produce an error explaining the accepted input.
+
+Each filter searches the full directory, including after a previous `find` or `filter`. If nobody matches, the list is empty and the result reports zero matches. Stored records are unchanged; use `list` to display everyone again.
 
 Examples:
 
-* `filter g/Chamber Orchestra`
-* `filter s/member i/Violin:3 g/Chamber Orchestra`
+* `filter g/Chamber Orchestra` — shows everyone in Chamber Orchestra.
+* `filter i/Violin i/Viola` — shows people who play violin or viola, including those who play both.
+* `filter s/member s/active-alumnus i/Violin:3 g/Chamber Orchestra` — shows current members or active alumni who also have at least 3 years on violin and belong to Chamber Orchestra.
+* `filter ty/teacher r/Conductor` — shows teachers whose role is Conductor.
 
 ### Exporting current results: `export`
 
