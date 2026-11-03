@@ -461,10 +461,6 @@ The following activity diagram summarizes what happens when a user executes a ne
   * Pros: Explicit.
   * Cons: Easy to forget in new commands; a change is recorded even if saving it fails.
 
-### \[Proposed\] Data archiving
-
-_{Explain here how the data archiving feature will be implemented}_
-
 
 --------------------------------------------------------------------------------------------------------------------
 
