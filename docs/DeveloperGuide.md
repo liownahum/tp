@@ -28,6 +28,10 @@ While working on HiveMind, I used OpenAI Codex to explore possible solutions and
 
 I reviewed AI-assisted work and used the relevant tests or checks for each task before accepting it. I remain responsible for all contributions and review decisions submitted under my account.
 
+#### Lim Chun Sheng (`cs28118`)
+
+I used OpenAI Codex to assist me in development for HiveMind. I reviewed and verified AI-assisted contributions in detailed for every changes made before accepting them and remain responsible for the work submitted.
+
 --------------------------------------------------------------------------------------------------------------------
 
 ## **Setting up, getting started**
