@@ -434,13 +434,12 @@ computer into the folder containing `HiveMind.jar` on the new computer. If the n
 
 ## Known issues
 
-1. **When using multiple screens**, if you move the application to a secondary screen, and later switch to using only the primary screen, the GUI will open off-screen. The remedy is to delete the `preferences.json` file created by the application before running the application again.
-2. **If you minimize the Help Window** and then run the `help` command (or use the `Help` menu, or the keyboard shortcut `F1`) again, the original Help Window will remain minimized, and no new Help Window will appear. The remedy is to manually restore the minimized Help Window.
-3. **If `HiveMind.jar` is in a write-protected folder** (a folder where you cannot create files), HiveMind may fail
+1. **If you minimize the Help Window** and then run the `help` command (or use the `Help` menu, or the keyboard shortcut `F1`) again, the original Help Window will remain minimized, and no new Help Window will appear. The remedy is to manually restore the minimized Help Window.
+1. **If `HiveMind.jar` is in a write-protected folder** (a folder where you cannot create files), HiveMind may fail
    to start, or may be unable to save your changes. The remedy is to move the JAR and its home-folder contents to a
    folder you can write to, such as a new folder in your user home folder.
-4. **Double-clicking the JAR file may not start HiveMind**, or may start it with a different Java version, on some systems. The remedy is to start it from a terminal with `java -jar`, as described in the [Quick start](#quick-start).
-5. **On macOS, if the main window is in full-screen mode**, the Help Window may open in a separate full-screen space or behind the main window. The remedy is to exit full-screen mode (e.g. press `Ctrl`+`Cmd`+`F`) before running `help`.
+1. **Double-clicking the JAR file may not start HiveMind**, or may start it with a different Java version, on some systems. The remedy is to start it from a terminal with `java -jar`, as described in the [Quick start](#quick-start).
+1. **On macOS, if the main window is in full-screen mode**, the Help Window may open in a separate full-screen space or behind the main window. The remedy is to exit full-screen mode (e.g. press `Ctrl`+`Cmd`+`F`) before running `help`.
 
 --------------------------------------------------------------------------------------------------------------------
 
