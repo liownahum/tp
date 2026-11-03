@@ -30,7 +30,7 @@ I reviewed AI-assisted work and used the relevant tests or checks for each task 
 
 #### Lim Chun Sheng (`cs28118`)
 
-I used OpenAI Codex to assist me in development for HiveMind. I reviewed and verified AI-assisted contributions in detailed for every changes made before accepting them and remain responsible for the work submitted.
+I used OpenAI Codex to assist me in development for HiveMind. I reviewed and verified AI-assisted contributions in detailed for every change made before accepting them. I used it in reviewing code, debugging, code quality check and testing. I remain responsible for the work submitted.
 
 #### Nahum Liow (`liownahum`)
 
