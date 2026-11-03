@@ -32,6 +32,12 @@ I reviewed AI-assisted work and used the relevant tests or checks for each task 
 
 I used OpenAI Codex to assist me in development for HiveMind. I reviewed and verified AI-assisted contributions in detailed for every changes made before accepting them and remain responsible for the work submitted.
 
+#### Nahum Liow (`liownahum`)
+
+I used OpenAI Codex as a development assistant to discuss features, understand the existing codebase, review code for bugs, coding-style violations and code-quality issues, draft and refine the User Guide and Developer Guide, and write test cases. I also used it to assist with reviewing other team members' PRs and drafting issues, PR descriptions and PR messages. Towards the end of the project, I also used it to help implement some features.
+
+I reviewed AI-assisted code, tests, documentation and project communications, and used the relevant tests and checks before accepting changes. I remain responsible for the correctness and quality of all contributions and review decisions submitted under my account.
+
 --------------------------------------------------------------------------------------------------------------------
 
 ## **Setting up, getting started**
@@ -458,10 +464,6 @@ The following activity diagram summarizes what happens when a user executes a ne
 * **Alternative 2:** Each data-changing command calls `Model#commitAddressBook(description)` (the original AB3 proposal).
   * Pros: Explicit.
   * Cons: Easy to forget in new commands; a change is recorded even if saving it fails.
-
-### \[Proposed\] Data archiving
-
-_{Explain here how the data archiving feature will be implemented}_
 
 
 --------------------------------------------------------------------------------------------------------------------
