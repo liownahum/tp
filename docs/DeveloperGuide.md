@@ -30,9 +30,9 @@ I reviewed AI-assisted work and used the relevant tests or checks for each task 
 
 #### Nahum Liow (`liownahum`)
 
-I used OpenAI Codex as a development assistant to discuss features, understand the existing codebase, review code for bugs, coding-style violations and code-quality issues, draft and refine the User Guide and Developer Guide, and write test cases. Towards the end of the project, I also used it to help implement some features.
+I used OpenAI Codex as a development assistant to discuss features, understand the existing codebase, review code for bugs, coding-style violations and code-quality issues, draft and refine the User Guide and Developer Guide, and write test cases. I also used it to assist with reviewing other team members' PRs and drafting issues, PR descriptions and PR messages. Towards the end of the project, I also used it to help implement some features.
 
-I reviewed AI-assisted code, tests and documentation, and used the relevant tests and checks before accepting changes. I remain responsible for the correctness and quality of all contributions submitted under my account.
+I reviewed AI-assisted code, tests, documentation and project communications, and used the relevant tests and checks before accepting changes. I remain responsible for the correctness and quality of all contributions and review decisions submitted under my account.
 
 --------------------------------------------------------------------------------------------------------------------
 
