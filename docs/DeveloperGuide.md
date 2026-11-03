@@ -34,6 +34,12 @@ I used OpenAI Codex as a development assistant to discuss features, understand t
 
 I reviewed AI-assisted code, tests, documentation and project communications, and used the relevant tests and checks before accepting changes. I remain responsible for the correctness and quality of all contributions and review decisions submitted under my account.
 
+#### Tristan Ng (`trigg770`)
+
+I used Anthropic's Claude Code throughout my work on HiveMind, along with DeepSeek through the SoC LLM service and a locally hosted Qwen model. These tools generated most of my code and tests from specifications I wrote. I also used them for debugging, finding bugs, drafting and checking the User Guide, Developer Guide and PlantUML diagrams, reviewing team members' PRs, and drafting issues, PR descriptions and review comments.
+
+I reviewed AI-assisted work and ran the relevant automated tests and code-style checks before accepting it. I remain responsible for the correctness and quality of all contributions and review decisions submitted under my account.
+
 --------------------------------------------------------------------------------------------------------------------
 
 ## **Setting up, getting started**
