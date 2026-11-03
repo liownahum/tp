@@ -28,6 +28,12 @@ While working on HiveMind, I used OpenAI Codex to explore possible solutions and
 
 I reviewed AI-assisted work and used the relevant tests or checks for each task before accepting it. I remain responsible for all contributions and review decisions submitted under my account.
 
+#### Nahum Liow (`liownahum`)
+
+I used OpenAI Codex as a development assistant to discuss features, understand the existing codebase, review code for bugs, coding-style violations and code-quality issues, draft and refine the User Guide and Developer Guide, and write test cases. Towards the end of the project, I also used it to help implement some features.
+
+I reviewed AI-assisted code, tests and documentation, and used the relevant tests and checks before accepting changes. I remain responsible for the correctness and quality of all contributions submitted under my account.
+
 --------------------------------------------------------------------------------------------------------------------
 
 ## **Setting up, getting started**
